@@ -5,6 +5,7 @@
 #include <chrono>
 #include <cstdint>
 #include <format>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <stdexcept>
@@ -38,13 +39,15 @@ class Mpu9250 {
         gyro_topic_("gyro", true) {
     assert(spi_device_ && gpio_cs_);
     Initialize();
-    thread_ = std::thread(&Mpu9250::ThreadTask, this);
+    LoadCalibrationData();
+    main_thread_ = std::thread(&Mpu9250::MainThreadTask, this);
+    calibrate_thread_ = std::thread(&Mpu9250::CalibrateThreadTask, this);
   }
 
   /**
    * Thread task that periodically reads and displays sensor data.
    */
-  void ThreadTask() {
+  void MainThreadTask() {
     std::chrono::microseconds period_us(static_cast<int>(1000));
     std::chrono::steady_clock::time_point next_time =
         std::chrono::steady_clock::now();
@@ -53,9 +56,58 @@ class Mpu9250 {
       ReadData();
       accel_topic_.Publish(accel_);
       gyro_topic_.Publish(gyro_);
-      // DisplayData();
       next_time += period_us;
       std::this_thread::sleep_until(next_time);
+    }
+  }
+
+  void CalibrateThreadTask() {
+    while (true) {
+      auto start_time = std::chrono::steady_clock::now();
+      std::chrono::microseconds period_us(static_cast<int>(1000));
+      std::chrono::steady_clock::time_point next_time =
+          std::chrono::steady_clock::now();
+      uint32_t counter = 0;
+      double gyro_offset_x = 0, gyro_offset_y = 0, gyro_offset_z = 0;
+      static bool cali_done = false;
+
+      if (cali_done) {
+        std::this_thread::sleep_for(std::chrono::seconds(UINT32_MAX));
+        continue;
+      }
+
+      while (true) {
+        if (std::fabsf(gyro_delta_.x) > 0.005 || fabsf(gyro_delta_.y) > 0.005 ||
+            fabsf(gyro_delta_.z) > 0.01) {
+          next_time += period_us;
+          std::this_thread::sleep_until(next_time);
+          break;
+        }
+
+        auto now = std::chrono::steady_clock::now();
+        if (now - start_time > std::chrono::seconds(5) &&
+            now - start_time < std::chrono::seconds(30)) {
+          counter++;
+          gyro_offset_x += gyro_.x;
+          gyro_offset_y += gyro_.y;
+          gyro_offset_z += gyro_.z;
+        }
+
+        if (now - start_time > std::chrono::seconds(35) && cali_done == false) {
+          gyro_bias_.x +=
+              static_cast<float>(gyro_offset_x / static_cast<double>(counter));
+          gyro_bias_.y +=
+              static_cast<float>(gyro_offset_y / static_cast<double>(counter));
+          gyro_bias_.z +=
+              static_cast<float>(gyro_offset_z / static_cast<double>(counter));
+          cali_done = true;
+          SaveCalibrationData();
+          std::cout << "Calibration completed\n";
+        }
+
+        next_time += period_us;
+        std::this_thread::sleep_until(next_time);
+      }
     }
   }
 
@@ -102,7 +154,7 @@ class Mpu9250 {
     spi_device_->WriteRegister(gpio_cs_, I2C_SLV0_CTRL, 0x81);
 
     /* Configure Digital Low-Pass Filter (DLPF). */
-    spi_device_->WriteRegister(gpio_cs_, CONFIG, 1);
+    spi_device_->WriteRegister(gpio_cs_, CONFIG, 3);
 
     /* Set the gyroscope sampling rate. */
     spi_device_->WriteRegister(gpio_cs_, SMPLRT_DIV, 0x01);
@@ -155,15 +207,26 @@ class Mpu9250 {
                        333.87f +
                    21.0f;
 
-    gyro_.x = static_cast<float>(
-                  static_cast<int16_t>((gyro_data[0] << 8) | gyro_data[1])) *
-              GYRO_SCALE;
-    gyro_.y = static_cast<float>(
-                  static_cast<int16_t>((gyro_data[2] << 8) | gyro_data[3])) *
-              GYRO_SCALE;
-    gyro_.z = static_cast<float>(
-                  static_cast<int16_t>((gyro_data[4] << 8) | gyro_data[5])) *
-              GYRO_SCALE;
+    float gyro_x = static_cast<float>(static_cast<int16_t>((gyro_data[0] << 8) |
+                                                           gyro_data[1])) *
+                       GYRO_SCALE -
+                   gyro_bias_.x;
+    float gyro_y = static_cast<float>(static_cast<int16_t>((gyro_data[2] << 8) |
+                                                           gyro_data[3])) *
+                       GYRO_SCALE -
+                   gyro_bias_.y;
+    float gyro_z = static_cast<float>(static_cast<int16_t>((gyro_data[4] << 8) |
+                                                           gyro_data[5])) *
+                       GYRO_SCALE -
+                   gyro_bias_.z;
+
+    gyro_delta_.x = gyro_x - gyro_.x;
+    gyro_delta_.y = gyro_y - gyro_.y;
+    gyro_delta_.z = gyro_z - gyro_.z;
+
+    gyro_.x = gyro_x;
+    gyro_.y = gyro_y;
+    gyro_.z = gyro_z;
   }
 
   /**
@@ -185,6 +248,64 @@ class Mpu9250 {
    */
   void WriteMagRegister(uint8_t reg, uint8_t value) {
     spi_device_->WriteRegister(gpio_cs_, reg, value);
+  }
+
+  /**
+   * Save the calibration data to a file.
+   */
+  void SaveCalibrationData() {
+    std::ofstream file("cali_data.bin", std::ios::binary);
+    if (!file) {
+      std::cerr << "Error: Unable to open cali_data.bin for writing.\n";
+      return;
+    }
+    file.write(reinterpret_cast<const char*>(&gyro_bias_), sizeof(gyro_bias_));
+    file.close();
+    std::cout << "Calibration data saved successfully.\n";
+  }
+
+  /**
+   * Load the calibration data from a file.
+   */
+  void LoadCalibrationData() {
+    std::ifstream file("cali_data.bin", std::ios::in | std::ios::binary);
+    if (!file) {
+      std::cerr << "Calibration file not found. Using default values.\n";
+      return;
+    }
+
+    // Check file size
+    file.seekg(0, std::ios::end);
+    std::streamsize file_size = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    if (file_size != sizeof(gyro_bias_)) {
+      std::cerr
+          << "Error: Calibration file size mismatch. Using default values.\n";
+      file.close();
+      gyro_bias_ = {0, 0, 0};
+      return;
+    }
+
+    // Read data
+    file.read(reinterpret_cast<char*>(&gyro_bias_), sizeof(gyro_bias_));
+    file.close();
+
+    // Validate data: Ensure gyro_bias values are within a reasonable range
+    if (std::abs(gyro_bias_.x) > 1.0f || std::abs(gyro_bias_.y) > 1.0f ||
+        std::abs(gyro_bias_.z) > 1.0f || std::isnan(gyro_bias_.x) ||
+        std::isnan(gyro_bias_.y) || std::isnan(gyro_bias_.z) ||
+        std::isinf(gyro_bias_.x) || std::isinf(gyro_bias_.y) ||
+        std::isinf(gyro_bias_.z)) {
+      std::cerr << "Error: Invalid calibration data detected. Resetting to "
+                   "default values.\n";
+      gyro_bias_ = {0, 0, 0};
+    } else {
+      std::cout << "Calibration data loaded successfully: "
+                << "X=" << gyro_bias_.x << ", "
+                << "Y=" << gyro_bias_.y << ", "
+                << "Z=" << gyro_bias_.z << "\n";
+    }
   }
 
   /** MPU9250 register addresses */
@@ -212,14 +333,16 @@ class Mpu9250 {
   SpiDevice* spi_device_; /* SPI device handle */
   Gpio* gpio_cs_;         /* GPIO chip select handle */
 
-  Type::Vector3 accel_; /* Accelerometer data */
-  Type::Vector3 gyro_;  /* Gyroscope data */
-  Type::Vector3 mag_;   /* Magnetometer data */
+  Type::Vector3 accel_;             /* Accelerometer data */
+  Type::Vector3 gyro_, gyro_delta_; /* Gyroscope data */
+  Type::Vector3 mag_;               /* Magnetometer data */
+
+  Type::Vector3 gyro_bias_ = {0, 0, 0}; /* Gyroscope calibration data */
 
   float temperature_ = 0; /* Temperature data */
 
   Message::Topic<Type::Vector3> accel_topic_; /* Accelerometer topic */
   Message::Topic<Type::Vector3> gyro_topic_;  /* Gyroscope topic */
 
-  std::thread thread_; /* Thread */
+  std::thread main_thread_, calibrate_thread_; /* Thread */
 };

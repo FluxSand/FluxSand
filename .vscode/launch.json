@@ -12,7 +12,7 @@
             "type": "lldb",
             "request": "launch",
             "name": "Debug",
-            "program": "${workspaceFolder}/build/xrobot.elf",
+            "program": "${workspaceFolder}/build/FluxSand.elf",
             "args": [],
             "cwd": "${workspaceFolder}"
         }

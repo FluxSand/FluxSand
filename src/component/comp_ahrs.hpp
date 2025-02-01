@@ -50,7 +50,6 @@ class AHRS {
       GetEulr();
       quat_tp_.Publish(quat_);
       eulr_tp_.Publish(eulr_);
-      DisplayData();
     }
   }
 
