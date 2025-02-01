@@ -69,23 +69,6 @@ This project is developed primarily in **C++**, running on a **Linux + Raspberry
 **📌 Code Structure**
 TODO: Add detailed code organization once development is complete.
 
-**📌 Key Technologies**
-
-- **Event-driven programming**: Uses **callbacks** to process sensor inputs & LED refresh, avoiding blocking operations and ensuring responsiveness.
-- **Multithreading control**: Separates data acquisition & display updates for real-time performance.
-- **GitHub version control**: Implements **Git for version tracking**, including commit history, issue tracking, and pull requests for structured development.
-
----
-
-## **🚀 Development Progress**
-
-🔄 **Hardware selection & procurement**
-🔄 **Initial code framework setup (C++ & sensor drivers)**
-🔄 **Optimization of real-time data processing**
-🔄 **Enhancing user interaction (touch buttons & LED animation)**
-🔄 **Software testing & debugging**
-📢 **Project promotion (social media & Hackaday)**
-
 ---
 
 ## **📢 Future Improvements**
@@ -94,11 +77,4 @@ TODO: Add detailed code organization once development is complete.
 🔹 **Wireless remote control**, allowing users to configure settings via WiFi/Bluetooth.
 🔹 **Data storage & visualization**, enabling users to track historical temperature & air pressure readings via a web interface.
 
----
-
-## **🔗 Relevant Links**
-
-📝 [**Documentation**](https://fluxsand.github.io/)
-📌 **GitHub Repository**: *Coming soon 🚀*
-📌 **Demo Video**: *Uploading soon 🎥*
-📌 **Social Media Promotion**: *Planned for Hackaday / Twitter 📢*
+## **📝References & Acknowledgments**
