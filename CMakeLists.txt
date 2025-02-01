@@ -87,6 +87,16 @@ set(CMAKE_CXX_FLAGS "-stdlib=libc++")
 target_compile_options(${PROJECT_NAME}.elf PRIVATE ${GPIOD_CFLAGS_OTHER})
 
 # ---------------------------------------------------------------------------------------
+# OneMessage
+add_subdirectory(third_party/om)
+target_include_directories(
+    OneMessage
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/third_party/
+)
+
+target_link_libraries(${PROJECT_NAME}.elf OneMessage)
+
+# ---------------------------------------------------------------------------------------
 # Build information
 message(
   STATUS

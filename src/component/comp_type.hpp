@@ -232,7 +232,7 @@ class CycleValue {
   float Value() { return value_; }
 
  private:
-  float value_; /**< The normalized cyclic value in [0, 2π). */
+  float value_; /* The normalized cyclic value in [0, 2π). */
 };
 
 /**

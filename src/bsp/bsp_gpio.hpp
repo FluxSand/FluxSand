@@ -6,8 +6,6 @@
 
 #include "bsp.hpp"
 
-namespace gpio {
-
 /**
  * Gpio class
  *
@@ -95,5 +93,3 @@ class Gpio {
   gpiod_line* line_{}; /* GPIO line handle */
   bool is_output_;     /* Output mode flag */
 };
-
-}  // namespace gpio

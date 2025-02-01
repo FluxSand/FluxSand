@@ -5,15 +5,15 @@
 #include <chrono>
 #include <cstdint>
 #include <format>
+#include <iomanip>
 #include <iostream>
 #include <stdexcept>
 #include <thread>
 
+#include "bsp_gpio.hpp"
+#include "bsp_spi.hpp"
 #include "comp_type.hpp"
-#include "gpio.hpp"
-#include "spi.hpp"
-
-namespace imu {
+#include "om.hpp"
 
 /**
  * MPU9250 class
@@ -28,9 +28,35 @@ class Mpu9250 {
    * @param spi_device Pointer to an SPI device object
    * @param gpio_cs    Pointer to a GPIO object (chip select)
    */
-  Mpu9250(spi::SpiDevice* spi_device, gpio::Gpio* gpio_cs)
-      : spi_device_(spi_device), gpio_cs_(gpio_cs), accel_(), gyro_(), mag_() {
+  Mpu9250(SpiDevice* spi_device, Gpio* gpio_cs)
+      : spi_device_(spi_device),
+        gpio_cs_(gpio_cs),
+        accel_(),
+        gyro_(),
+        mag_(),
+        accel_topic_("accel", true),
+        gyro_topic_("gyro", true) {
     assert(spi_device_ && gpio_cs_);
+    Initialize();
+    thread_ = std::thread(&Mpu9250::ThreadTask, this);
+  }
+
+  /**
+   * Thread task that periodically reads and displays sensor data.
+   */
+  void ThreadTask() {
+    std::chrono::microseconds period_us(static_cast<int>(1000));
+    std::chrono::steady_clock::time_point next_time =
+        std::chrono::steady_clock::now();
+
+    while (true) {
+      ReadData();
+      accel_topic_.Publish(accel_);
+      gyro_topic_.Publish(gyro_);
+      // DisplayData();
+      next_time += period_us;
+      std::this_thread::sleep_until(next_time);
+    }
   }
 
   /**
@@ -53,6 +79,12 @@ class Mpu9250 {
           "Error: MPU9250 connection failed (WHO_AM_I: 0x{:02X})", who_am_i));
     }
 
+    /* Gyroscope clock source configuration */
+    spi_device_->WriteRegister(gpio_cs_, PWR_MGMT_1, 0x03);
+
+    /* Enable Accelerometer and Gyroscope */
+    spi_device_->WriteRegister(gpio_cs_, PWR_MGMT_2, 0x00);
+
     /* Configure I2C Master mode for communication with AK8963 (magnetometer).
      */
     spi_device_->WriteRegister(gpio_cs_, INT_PIN_CFG, 0x30);
@@ -73,16 +105,16 @@ class Mpu9250 {
     spi_device_->WriteRegister(gpio_cs_, CONFIG, 1);
 
     /* Set the gyroscope sampling rate. */
-    spi_device_->WriteRegister(gpio_cs_, SMPLRT_DIV, 0x07);
+    spi_device_->WriteRegister(gpio_cs_, SMPLRT_DIV, 0x01);
 
     /* Configure gyroscope full-scale range to ±2000°/s. */
-    spi_device_->WriteRegister(gpio_cs_, GYRO_CONFIG, 0x1B);
-
-    /* Configure accelerometer low-pass filter. */
-    spi_device_->WriteRegister(gpio_cs_, ACCEL_CONFIG_2, 0x0F);
+    spi_device_->WriteRegister(gpio_cs_, GYRO_CONFIG, 0x18);
 
     /* Configure accelerometer full-scale range to ±16g. */
     spi_device_->WriteRegister(gpio_cs_, ACCEL_CONFIG, 0x18);
+
+    /* Configure accelerometer low-pass filter. */
+    spi_device_->WriteRegister(gpio_cs_, ACCEL_CONFIG_2, 0x00);
 
     /* Reset the AK8963 magnetometer. */
     WriteMagRegister(AK8963_CNTL2_REG, AK8963_CNTL2_SRST);
@@ -97,18 +129,16 @@ class Mpu9250 {
    * Reads sensor data for acceleration and gyroscope.
    */
   void ReadData() {
-    std::array<uint8_t, 6> accel_data{};
-    std::array<uint8_t, 6> gyro_data{};
+    std::array<uint8_t, 14> data{};
 
-    for (size_t i = 0; i < accel_data.size(); ++i) {
-      accel_data[i] = spi_device_->ReadRegister(
-          gpio_cs_, ACCEL_XOUT_H + static_cast<uint8_t>(i));
-      gyro_data[i] = spi_device_->ReadRegister(
-          gpio_cs_, GYRO_XOUT_H + static_cast<uint8_t>(i));
-    }
+    spi_device_->ReadRegisters(gpio_cs_, ACCEL_XOUT_H, &data[0], 14);
 
     constexpr float ACCEL_SCALE = 16.0f / 32768.0f * 9.80665f;
-    constexpr float GYRO_SCALE = 250.0f / 32768.0f * M_PI / 180.0f;
+    constexpr float GYRO_SCALE = 2000.0f / 32768.0f * M_PI / 180.0f;
+
+    uint8_t* accel_data = &data[0];
+    uint8_t* temperature_data = &data[6];
+    uint8_t* gyro_data = &data[8];
 
     accel_.x = static_cast<float>(
                    static_cast<int16_t>((accel_data[0] << 8) | accel_data[1])) *
@@ -119,6 +149,11 @@ class Mpu9250 {
     accel_.z = static_cast<float>(
                    static_cast<int16_t>((accel_data[4] << 8) | accel_data[5])) *
                ACCEL_SCALE;
+
+    temperature_ = static_cast<float>(static_cast<int16_t>(
+                       (temperature_data[0] << 8) | temperature_data[1])) /
+                       333.87f +
+                   21.0f;
 
     gyro_.x = static_cast<float>(
                   static_cast<int16_t>((gyro_data[0] << 8) | gyro_data[1])) *
@@ -136,8 +171,9 @@ class Mpu9250 {
    */
   void DisplayData() {
     std::cout << std::format(
-        "Acceleration: X={} Y={} Z={} | Gyroscope: X={} Y={} Z={}\n", accel_.x,
-        accel_.y, accel_.z, gyro_.x, gyro_.y, gyro_.z);
+        "Acceleration: [X={:+.4f}, Y={:+.4f}, Z={:+.4f}] | Gyroscope: "
+        "[X={:+.4f}, Y={:+.4f}, Z={:+.4f}] | Temperature: {:+.4f} °C\n",
+        accel_.x, accel_.y, accel_.z, gyro_.x, gyro_.y, gyro_.z, temperature_);
   }
 
  private:
@@ -154,6 +190,7 @@ class Mpu9250 {
   /** MPU9250 register addresses */
   static constexpr uint8_t WHO_AM_I = 0x75;
   static constexpr uint8_t PWR_MGMT_1 = 0x6B;
+  static constexpr uint8_t PWR_MGMT_2 = 0x6C;
   static constexpr uint8_t CONFIG = 0x1A;
   static constexpr uint8_t SMPLRT_DIV = 0x19;
   static constexpr uint8_t GYRO_CONFIG = 0x1B;
@@ -172,12 +209,17 @@ class Mpu9250 {
   static constexpr uint8_t AK8963_CNTL2_REG = 0x0B;
   static constexpr uint8_t AK8963_CNTL2_SRST = 0x01;
 
-  spi::SpiDevice* spi_device_; /**< SPI device handle */
-  gpio::Gpio* gpio_cs_;        /**< GPIO chip select handle */
+  SpiDevice* spi_device_; /* SPI device handle */
+  Gpio* gpio_cs_;         /* GPIO chip select handle */
 
-  Type::Vector3 accel_; /**< Accelerometer data */
-  Type::Vector3 gyro_;  /**< Gyroscope data */
-  Type::Vector3 mag_;   /**< Magnetometer data */
+  Type::Vector3 accel_; /* Accelerometer data */
+  Type::Vector3 gyro_;  /* Gyroscope data */
+  Type::Vector3 mag_;   /* Magnetometer data */
+
+  float temperature_ = 0; /* Temperature data */
+
+  Message::Topic<Type::Vector3> accel_topic_; /* Accelerometer topic */
+  Message::Topic<Type::Vector3> gyro_topic_;  /* Gyroscope topic */
+
+  std::thread thread_; /* Thread */
 };
-
-}  // namespace imu

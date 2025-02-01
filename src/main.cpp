@@ -2,30 +2,24 @@
 #include <iostream>
 #include <thread>
 
-#include "gpio.hpp"
+#include "bsp_gpio.hpp"
+#include "bsp_spi.hpp"
+#include "comp_ahrs.hpp"
 #include "mpu9250.hpp"
-#include "spi.hpp"
+#include "om.hpp"
 
 int main() {
-  try {
-    spi::SpiDevice spi_device("/dev/spidev0.0", 5000000, SPI_MODE_0);
-    gpio::Gpio gpio_cs("gpiochip0", 14, true, 1);
-    imu::Mpu9250 mpu9250(&spi_device, &gpio_cs);
+  Message();
 
-    mpu9250.Initialize();
+  SpiDevice spi_device("/dev/spidev0.0", 1000000, SPI_MODE_0);
+  Gpio gpio_cs("gpiochip0", 14, true, 1);
 
-    std::cout << "MPU9250 initialized. Starting data collection...\n";
-    while (true) {
-      mpu9250.ReadData();
-      mpu9250.DisplayData();
-      std::cout << "--------------------------------------\n";
-      std::this_thread::sleep_for(
-          std::chrono::milliseconds(1));  // 500ms sampling interval
-    }
+  Mpu9250 mpu9250(&spi_device, &gpio_cs);
 
-  } catch (const std::exception& e) {
-    std::cerr << std::format("Exception: {}\n", e.what());
-    return 1;
+  AHRS ahrs;
+
+  while (true) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   }
 
   return 0;

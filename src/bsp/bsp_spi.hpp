@@ -12,9 +12,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "gpio.hpp"
-
-namespace spi {
+#include "bsp_gpio.hpp"
 
 /**
  * SPI device interface for configuration and register operations.
@@ -57,7 +55,7 @@ class SpiDevice {
    * @param reg Register address (MSB set to 1 for read operation)
    * @return Read value
    */
-  uint8_t ReadRegister(gpio::Gpio* cs, uint8_t reg) {
+  uint8_t ReadRegister(Gpio* cs, uint8_t reg) {
     assert(cs);  // Ensure GPIO object is valid
 
     std::array<uint8_t, 2> tx_buf = {{static_cast<uint8_t>(reg | 0x80), 0}};
@@ -87,7 +85,7 @@ class SpiDevice {
    * @param reg   Register address
    * @param value Value to write
    */
-  void WriteRegister(gpio::Gpio* cs, uint8_t reg, uint8_t value) {
+  void WriteRegister(Gpio* cs, uint8_t reg, uint8_t value) {
     assert(cs);  // Ensure GPIO object is valid
 
     std::array<uint8_t, 2> tx_buf = {{reg, value}};
@@ -106,9 +104,33 @@ class SpiDevice {
     cs->Write(1);
   }
 
+  void ReadRegisters(Gpio* cs, uint8_t reg, uint8_t* buffer, size_t length) {
+    assert(cs);
+    assert(buffer);
+
+    std::vector<uint8_t> tx_buf(length + 1, 0);
+    std::vector<uint8_t> rx_buf(length + 1, 0);
+    tx_buf[0] = reg | 0x80;
+
+    struct spi_ioc_transfer transfer{};
+    transfer.tx_buf = reinterpret_cast<uint64_t>(tx_buf.data());
+    transfer.rx_buf = reinterpret_cast<uint64_t>(rx_buf.data());
+    transfer.len = tx_buf.size();
+    transfer.speed_hz = speed_;
+    transfer.bits_per_word = 8;
+
+    cs->Write(0);
+    usleep(10);
+    if (ioctl(fd_, SPI_IOC_MESSAGE(1), &transfer) < 0) {
+      cs->Write(1);
+      throw std::runtime_error("SPI multiple read failed");
+    }
+    cs->Write(1);
+
+    std::memcpy(buffer, rx_buf.data() + 1, length);
+  }
+
  private:
   int fd_;         /* SPI file descriptor */
   uint32_t speed_; /* Transfer speed in Hz */
 };
-
-}  // namespace spi
