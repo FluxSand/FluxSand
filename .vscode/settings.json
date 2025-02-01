@@ -8,7 +8,7 @@
         "Ninja"
     ],
     "files.insertFinalNewline": true,
-    "files.trimTrailingWhitespace": true,
+    "files.trimTrailingWhitespace": false,
     "files.trimFinalNewlines": true,
     "files.autoSave": "onFocusChange",
     "files.associations": {
@@ -49,4 +49,5 @@
     "clangd.path": "clangd",
     "editor.inlayHints.enabled": "offUnlessPressed",
     "cmake.options.statusBarVisibility": "visible",
+    "files.trimTrailingWhitespaceInRegexAndStrings": false,
 }

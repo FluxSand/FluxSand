@@ -34,31 +34,31 @@
 
 ## **🎯 Key Features**
 
-✅ **Real-time sensor data acquisition**: The MPU-9250 gyroscope & accelerometer detect device orientation to control sand flow direction and speed.
-✅ **High-efficiency LED visual display**: MAX7219 LED matrix presents fluid hourglass effects and weather information.
-✅ **Touch button interaction**: Users can switch between different modes, such as a countdown timer or a weather clock.
-✅ **Smart brightness adjustment**: The light sensor automatically modifies LED brightness based on ambient conditions.
-✅ **Audio feedback**: The buzzer signals key events, such as countdown completion or mode changes.
-✅ **Temperature & air pressure detection**: The AHT20 + BMP280 module measures ambient temperature and air pressure readings for the weather clock mode.
+✅ **Real-time sensor data acquisition**: The MPU-9250 gyroscope & accelerometer detect device orientation to control sand flow direction and speed.  
+✅ **High-efficiency LED visual display**: MAX7219 LED matrix presents fluid hourglass effects and weather information.  
+✅ **Touch button interaction**: Users can switch between different modes, such as a countdown timer or a weather clock.  
+✅ **Smart brightness adjustment**: The light sensor automatically modifies LED brightness based on ambient conditions.  
+✅ **Audio feedback**: The buzzer signals key events, such as countdown completion or mode changes.  
+✅ **Temperature & air pressure detection**: The AHT20 + BMP280 module measures ambient temperature and air pressure readings for the weather clock mode.  
 
 ---
 
 ## **🔧 Hardware Components**
 
-| Component | Specification | Quantity | Purpose |
-|-----------|---------------|----------|---------|
-| **MAX7219 LED Matrix** | 8x8 units | 8 | Hourglass visualization & weather clock display |
-| **AHT20 + BMP280 Module** | Temperature, humidity, and pressure sensor | 1 | Weather clock mode measurements |
-| **GY-9250 Module** | 9-axis gyroscope & accelerometer | 1 | Orientation detection & sand flow control |
-| **TTP223 Touch Button** | Capacitive | 2 | Interaction control (mode switching) |
-| **Buzzer** | 3V active | 1 | Audio alerts |
-| **Light Sensor** | 5506 | 1 | Light detection for automatic brightness adjustment |
-| **ADS1115** | 16-bit ADC module | 1 | Analog signal conversion |
-| **Thermistor (MF11)** | 10kΩ NTC | 1 | Temperature compensation |
-| **Type-C Connector** | DIY solderable | 1 | Power supply connection |
-| **Type-C Cable** | 24P 3A data cable | 1 | Data & power transfer |
-| **Wires/Dupont Lines** | Various | - | Circuit connections |
-| **Prototyping Board** | Breadboard | - | Circuit assembly |
+| Component                 | Specification                              | Quantity | Purpose                                             |
+| ------------------------- | ------------------------------------------ | -------- | --------------------------------------------------- |
+| **MAX7219 LED Matrix**    | 8x8 units                                  | 8        | Hourglass visualization & weather clock display     |
+| **AHT20 + BMP280 Module** | Temperature, humidity, and pressure sensor | 1        | Weather clock mode measurements                     |
+| **GY-9250 Module**        | 9-axis gyroscope & accelerometer           | 1        | Orientation detection & sand flow control           |
+| **TTP223 Touch Button**   | Capacitive                                 | 2        | Interaction control (mode switching)                |
+| **Buzzer**                | 3V active                                  | 1        | Audio alerts                                        |
+| **Light Sensor**          | 5506                                       | 1        | Light detection for automatic brightness adjustment |
+| **ADS1115**               | 16-bit ADC module                          | 1        | Analog signal conversion                            |
+| **Thermistor (MF11)**     | 10kΩ NTC                                   | 1        | Temperature compensation                            |
+| **Type-C Connector**      | DIY solderable                             | 1        | Power supply connection                             |
+| **Type-C Cable**          | 24P 3A data cable                          | 1        | Data & power transfer                               |
+| **Wires/Dupont Lines**    | Various                                    | -        | Circuit connections                                 |
+| **Prototyping Board**     | Breadboard                                 | -        | Circuit assembly                                    |
 
 ---
 
@@ -73,8 +73,14 @@ TODO: Add detailed code organization once development is complete.
 
 ## **📢 Future Improvements**
 
-🔹 **Additional visual display modes**, such as different sand animations or symbol-based representations.
-🔹 **Wireless remote control**, allowing users to configure settings via WiFi/Bluetooth.
-🔹 **Data storage & visualization**, enabling users to track historical temperature & air pressure readings via a web interface.
+🔹 **Additional visual display modes**, such as different sand animations or symbol-based representations.  
+🔹 **Wireless remote control**, allowing users to configure settings via WiFi/Bluetooth.  
+🔹 **Data storage & visualization**, enabling users to track historical temperature & air pressure readings via a web interface.  
 
 ## **📝References & Acknowledgments**
+
+🔹 [**Madgwick's filter**](https://github.com/xioTechnologies/Open-Source-AHRS-With-x-IMU): Madgwick algorithm for orientation estimation.
+
+🔹 [**XRobot**](https://github.com/xrobot-org/XRobot): An embedded software framework for MCU, Arm/x86 Linux and simulator.
+
+🔹 [**OneMessage**](https://github.com/Jiu-xiao/OneMessage): OneMessage is a real-time subscribe/publish message framework for embedded systems.
