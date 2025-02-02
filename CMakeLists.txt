@@ -25,6 +25,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/build)
 
 # ---------------------------------------------------------------------------------------
+# ONNX Model Path
+add_compile_definitions(ONNX_MODEL_PATH="${CMAKE_CURRENT_SOURCE_DIR}/model/model.onnx")
+
+# ---------------------------------------------------------------------------------------
 # Building Options
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(CMAKE_C_FLAGS_DEBUG "-Og -g")
@@ -95,6 +99,14 @@ target_include_directories(
 )
 
 target_link_libraries(${PROJECT_NAME}.elf OneMessage)
+
+# ---------------------------------------------------------------------------------------
+# OnnxRuntime
+find_package(onnxruntime REQUIRED)
+include_directories(
+  /usr/local/include/onnxruntime
+  /usr/local/include/onnxruntime/core/session)
+target_link_libraries(${PROJECT_NAME}.elf onnxruntime)
 
 # ---------------------------------------------------------------------------------------
 # Build information
