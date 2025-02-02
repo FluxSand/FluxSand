@@ -94,14 +94,24 @@ class Mpu9250 {
         }
 
         if (now - start_time > std::chrono::seconds(35) && cali_done == false) {
-          gyro_bias_.x +=
+          float bias_x =
               static_cast<float>(gyro_offset_x / static_cast<double>(counter));
-          gyro_bias_.y +=
+          float bias_y =
               static_cast<float>(gyro_offset_y / static_cast<double>(counter));
-          gyro_bias_.z +=
+          float bias_z =
               static_cast<float>(gyro_offset_z / static_cast<double>(counter));
+
+          if (std::fabsf(bias_x) > 0.005 || std::fabsf(bias_y) > 0.005 ||
+              std::fabsf(bias_z) > 0.005) {
+            gyro_bias_.x += bias_x;
+            gyro_bias_.y += bias_y;
+            gyro_bias_.z += bias_z;
+            SaveCalibrationData();
+            std::cout << "Calibration data saved\n";
+          } else {
+            std::cout << "No need to calibrate\n";
+          }
           cali_done = true;
-          SaveCalibrationData();
           std::cout << "Calibration completed\n";
         }
 
@@ -239,6 +249,10 @@ class Mpu9250 {
         accel_.x, accel_.y, accel_.z, gyro_.x, gyro_.y, gyro_.z, temperature_);
   }
 
+  Type::Vector3 accel_; /* Accelerometer data */
+  Type::Vector3 gyro_;  /* Gyroscope data */
+  Type::Vector3 mag_;   /* Magnetometer data */
+
  private:
   /**
    * Writes a value to the AK8963 magnetometer via I2C.
@@ -333,9 +347,7 @@ class Mpu9250 {
   SpiDevice* spi_device_; /* SPI device handle */
   Gpio* gpio_cs_;         /* GPIO chip select handle */
 
-  Type::Vector3 accel_;             /* Accelerometer data */
-  Type::Vector3 gyro_, gyro_delta_; /* Gyroscope data */
-  Type::Vector3 mag_;               /* Magnetometer data */
+  Type::Vector3 gyro_delta_; /* Gyroscope delta data */
 
   Type::Vector3 gyro_bias_ = {0, 0, 0}; /* Gyroscope calibration data */
 
