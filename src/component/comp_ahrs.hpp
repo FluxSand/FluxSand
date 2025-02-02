@@ -4,6 +4,7 @@
   MadgwickAHRS
 */
 
+#include <fstream>
 #include <semaphore>
 
 #include "bsp.hpp"
@@ -177,10 +178,33 @@ class AHRS {
         "Eulr: [rol={:+.4f}, pit={:+.4f}, yaw={:+.4f}] dt={:+.8f}\n",
         quat_.q0, quat_.q1, quat_.q2, quat_.q3, eulr_.rol.Value(),
         eulr_.pit.Value(), eulr_.yaw.Value(), dt_);
-    // std::cout << std::format(
-    //     "Acceleration: [X={:+.4f}, Y={:+.4f}, Z={:+.4f}] | Gyroscope: "
-    //     "[X={:+.4f}, Y={:+.4f}, Z={:+.4f}]\n",
-    //     accel_.x, accel_.y, accel_.z, gyro_.x, gyro_.y, gyro_.z);
+  }
+
+  void StartRecordData() {
+    record_thread_ = std::thread(&AHRS::RecordTask, this);
+  }
+
+  void RecordTask() {
+    std::ofstream csv_file("imu_data.csv");
+    std::chrono::microseconds period_us(static_cast<int>(1000));
+
+    std::chrono::steady_clock::time_point next_time, start_time;
+    next_time = start_time = std::chrono::steady_clock::now();
+    csv_file << "timestamp,ax,ay,az,gx,gy,gz,q0,q1,q2,q3,rol,pit,yaw,label\n";
+    while (true) {
+      csv_file << std::to_string((next_time.time_since_epoch().count() -
+                                  start_time.time_since_epoch().count()) /
+                                 1000)
+               << "," << accel_.x << "," << accel_.y << "," << accel_.z << ","
+               << gyro_.x << "," << gyro_.y << "," << gyro_.z << "," << quat_.q0
+               << "," << quat_.q1 << "," << quat_.q2 << "," << quat_.q3 << ","
+               << eulr_.rol.Value() << "," << eulr_.pit.Value() << ","
+               << eulr_.yaw.Value() << "," << "1\n";
+      csv_file.flush();
+
+      next_time += period_us;
+      std::this_thread::sleep_until(next_time);
+    }
   }
 
  private:
@@ -201,5 +225,5 @@ class AHRS {
 
   std::binary_semaphore ready_;
 
-  std::thread thread_; /* Thread */
+  std::thread thread_, record_thread_; /* Thread */
 };
