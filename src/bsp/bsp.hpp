@@ -59,27 +59,3 @@
 
 #define CONTAINER_OF(ptr, type, member) \
   ((type *)((char *)(ptr) - OFFSET_OF(type, member)))
-
-/**
- * Standard error codes used throughout the system.
- */
-enum class ErrorCode : int8_t {
-  OK = 0,
-  FAILED = -1,
-  INIT_ERR = -2,
-  ARG_ERR = -3,
-  STATE_ERR = -4,
-  SIZE_ERR = -5,
-  CHECK_ERR = -6,
-  NOT_SUPPORT = -7,
-  NOT_FOUND = -8,
-  NO_RESPONSE = -9,
-  NO_MEM = -10,
-  NO_BUFF = -11,
-  TIMEOUT = -12,
-  EMPTY = -13,
-  FULL = -14,
-  BUSY = -15,
-  PTR_NULL = -16,
-  OUT_OF_RANGE = -17,
-};

@@ -82,5 +82,3 @@ TODO: Add detailed code organization once development is complete.
 🔹 [**Madgwick's filter**](https://github.com/xioTechnologies/Open-Source-AHRS-With-x-IMU): Madgwick algorithm for orientation estimation.
 
 🔹 [**XRobot**](https://github.com/xrobot-org/XRobot): An embedded software framework for MCU, Arm/x86 Linux and simulator.
-
-🔹 [**OneMessage**](https://github.com/Jiu-xiao/OneMessage): OneMessage is a real-time subscribe/publish message framework for embedded systems.

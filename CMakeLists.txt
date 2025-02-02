@@ -91,14 +91,13 @@ set(CMAKE_CXX_FLAGS "-stdlib=libc++")
 target_compile_options(${PROJECT_NAME}.elf PRIVATE ${GPIOD_CFLAGS_OTHER})
 
 # ---------------------------------------------------------------------------------------
-# OneMessage
-add_subdirectory(third_party/om)
-target_include_directories(
-    OneMessage
-    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/third_party/
-)
+# libxr
+set(LIBXR_DEFAULT_SCALAR "float")
+add_compile_definitions(LIBXR_DEFAULT_SCALAR=${LIBXR_DEFAULT_SCALAR})
 
-target_link_libraries(${PROJECT_NAME}.elf OneMessage)
+add_subdirectory(third_party/libxr)
+
+target_link_libraries(${PROJECT_NAME}.elf xr)
 
 # ---------------------------------------------------------------------------------------
 # OnnxRuntime

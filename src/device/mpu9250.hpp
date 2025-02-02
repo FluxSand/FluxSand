@@ -14,7 +14,7 @@
 #include "bsp_gpio.hpp"
 #include "bsp_spi.hpp"
 #include "comp_type.hpp"
-#include "om.hpp"
+#include "message.hpp"
 
 /**
  * MPU9250 class
@@ -38,6 +38,10 @@ class Mpu9250 {
         accel_topic_("accel", true),
         gyro_topic_("gyro", true) {
     assert(spi_device_ && gpio_cs_);
+
+    accel_topic_ = LibXR::Topic::CreateTopic<Type::Vector3>("accel");
+    gyro_topic_ = LibXR::Topic::CreateTopic<Type::Vector3>("gyro");
+
     Initialize();
     LoadCalibrationData();
     main_thread_ = std::thread(&Mpu9250::MainThreadTask, this);
@@ -243,10 +247,14 @@ class Mpu9250 {
    * Displays the most recently read sensor data.
    */
   void DisplayData() {
+    float accel_instensity =
+        sqrt(accel_.x * accel_.x + accel_.y * accel_.y + accel_.z * accel_.z);
     std::cout << std::format(
-        "Acceleration: [X={:+.4f}, Y={:+.4f}, Z={:+.4f}] | Gyroscope: "
+        "Acceleration: [X={:+.4f}, Y={:+.4f}, Z={:+.4f} | Intensity={:+.4f}] | "
+        "Gyroscope: "
         "[X={:+.4f}, Y={:+.4f}, Z={:+.4f}] | Temperature: {:+.4f} °C\n",
-        accel_.x, accel_.y, accel_.z, gyro_.x, gyro_.y, gyro_.z, temperature_);
+        accel_.x, accel_.y, accel_.z, accel_instensity, gyro_.x, gyro_.y,
+        gyro_.z, temperature_);
   }
 
   Type::Vector3 accel_; /* Accelerometer data */
@@ -353,8 +361,8 @@ class Mpu9250 {
 
   float temperature_ = 0; /* Temperature data */
 
-  Message::Topic<Type::Vector3> accel_topic_; /* Accelerometer topic */
-  Message::Topic<Type::Vector3> gyro_topic_;  /* Gyroscope topic */
+  LibXR::Topic accel_topic_; /* Accelerometer topic */
+  LibXR::Topic gyro_topic_;  /* Gyroscope topic */
 
   std::thread main_thread_, calibrate_thread_; /* Thread */
 };

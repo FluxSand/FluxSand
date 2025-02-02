@@ -38,6 +38,10 @@
 #define UNUSED(_x) ((void)(_x))
 #endif
 
+#ifndef typeof
+#define typeof __typeof__
+#endif
+
 #ifndef OFFSET_OF
 #define OFFSET_OF(type, member) ((size_t)&((type *)0)->member)
 #endif
