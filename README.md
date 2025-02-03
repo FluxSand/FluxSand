@@ -6,6 +6,8 @@
 
 [![pages-build-deployment](https://github.com/FluxSand/FluxSand.github.io/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/FluxSand/FluxSand.github.io/actions/workflows/pages/pages-build-deployment)
 
+[![Train and Release Model](https://github.com/FluxSand/ModelTrainer/actions/workflows/build.yml/badge.svg)](https://github.com/FluxSand/ModelTrainer/actions/workflows/build.yml)
+
 </div>
 
 🚀 **FluxSand** is an **interactive digital hourglass** designed using **real-time embedded systems**. It combines **gyroscope sensing, LED matrix display, and touch interaction** to create a dynamic and visually engaging timekeeping experience. By leveraging advanced sensor fusion and real-time processing, this system responds seamlessly to user actions, providing an immersive interaction.
