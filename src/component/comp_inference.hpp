@@ -154,23 +154,24 @@ class InferenceEngine {
     cmd_file_ = LibXR::RamFS::CreateFile<InferenceEngine*>(
         "inference_engine",
         [](InferenceEngine*& inference_engine, int argc, char** argv) {
-          if (strcmp(argv[1], "record") == 0 && argc == 3) {
+          if (strcmp(argv[1], "record") == 0 && argc == 4) {
             int length = atoi(argv[2]);
-            inference_engine->RecordData(length);
+            inference_engine->RecordData(length, argv[3]);
           } else {
-            std::cout << "Usage: inference_engine record <length>\n";
+            std::cout << "Usage: inference_engine record <length> <file_prefix>\n";
           }
           return 0;
         },
         this);
   }
 
-  void RecordData(int length) {
+  void RecordData(int length, char* prefix) {
     std::time_t t = std::time(nullptr);
     std::tm tm = *std::localtime(&t);
-    std::string filename = std::format(
-        "record_{:04}{:02}{:02}_{:02}{:02}{:02}.csv", tm.tm_year + 1900,
-        tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+    std::string filename =
+        std::format("{}_record_{:04}{:02}{:02}_{:02}{:02}{:02}.csv", prefix,
+                    tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
+                    tm.tm_min, tm.tm_sec);
 
     std::ofstream file(filename);
     if (!file.is_open()) {
@@ -221,7 +222,7 @@ class InferenceEngine {
         std::vector<float> input_data(sensor_buffer_.begin(),
                                       sensor_buffer_.end());
         std::string result = RunInference(input_data);
-        std::cout << std::format("Inference Result: {}\n", result);
+        // std::cout << std::format("Inference Result: {}\n", result);
       }
 
       update_counter++;

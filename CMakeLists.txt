@@ -55,7 +55,7 @@ else()
 endif()
 
 # ---------------------------------------------------------------------------------------
-# PkgConfig
+# libgpiod
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GPIOD REQUIRED libgpiod)
 
@@ -64,16 +64,15 @@ pkg_check_modules(GPIOD REQUIRED libgpiod)
 file(GLOB BSP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/bsp/*.cpp")
 file(GLOB DEV_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/bsp/*.cpp")
 
-
 set(SOURCES src/main.cpp ${BSP_SOURCES} ${DEV_SOURCES})
 
 # ---------------------------------------------------------------------------------------
 # Executable
-add_executable(${PROJECT_NAME}.elf ${SOURCES})
+add_executable(${PROJECT_NAME} ${SOURCES})
 
 # ---------------------------------------------------------------------------------------
 # Include
-target_include_directories(${PROJECT_NAME}.elf
+target_include_directories(${PROJECT_NAME}
   PRIVATE ${GPIOD_INCLUDE_DIRS}
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/bsp
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/device
@@ -83,12 +82,12 @@ target_include_directories(${PROJECT_NAME}.elf
 # ---------------------------------------------------------------------------------------
 # Link
 add_compile_options(-fexperimental-library)
-target_link_libraries(${PROJECT_NAME}.elf ${GPIOD_LIBRARIES} pthread)
+target_link_libraries(${PROJECT_NAME} ${GPIOD_LIBRARIES} pthread)
 set(CMAKE_CXX_FLAGS "-stdlib=libc++")
 
 # ---------------------------------------------------------------------------------------
 # Compile Options
-target_compile_options(${PROJECT_NAME}.elf PRIVATE ${GPIOD_CFLAGS_OTHER})
+target_compile_options(${PROJECT_NAME} PRIVATE ${GPIOD_CFLAGS_OTHER})
 
 # ---------------------------------------------------------------------------------------
 # libxr
@@ -97,7 +96,7 @@ add_compile_definitions(LIBXR_DEFAULT_SCALAR=${LIBXR_DEFAULT_SCALAR})
 
 add_subdirectory(third_party/libxr)
 
-target_link_libraries(${PROJECT_NAME}.elf xr)
+target_link_libraries(${PROJECT_NAME} xr)
 
 # ---------------------------------------------------------------------------------------
 # OnnxRuntime
@@ -105,7 +104,20 @@ find_package(onnxruntime REQUIRED)
 include_directories(
   /usr/local/include/onnxruntime
   /usr/local/include/onnxruntime/core/session)
-target_link_libraries(${PROJECT_NAME}.elf onnxruntime)
+target_link_libraries(${PROJECT_NAME} onnxruntime)
+
+# ---------------------------------------------------------------------------------------
+# Install
+install(TARGETS ${PROJECT_NAME}
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib)
+
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/model/
+  DESTINATION share/${PROJECT_NAME}/model)
+
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/
+  DESTINATION share/${PROJECT_NAME}/src)
 
 # ---------------------------------------------------------------------------------------
 # Build information
@@ -117,15 +129,12 @@ string(TIMESTAMP CONFIG_TIMESTAMP "" UTC)
 message(STATUS "Timestamp: ${CONFIG_TIMESTAMP}")
 message(
   STATUS
-  "Host: ${CMAKE_HOST_SYSTEM_NAME} ${CMAKE_HOST_SYSTEM_VERSION} ${CMAKE_HOST_SYSTEM_PROCESSOR}"
-)
+  "Host: ${CMAKE_HOST_SYSTEM_NAME} ${CMAKE_HOST_SYSTEM_VERSION} ${CMAKE_HOST_SYSTEM_PROCESSOR}")
 
-if(CMAKE_CROSSCOMPILING) # set to true by CMake if the CMAKE_SYSTEM_NAME has
-  # been set manually
+if(CMAKE_CROSSCOMPILING)
   message(
     STATUS
-    "Target: ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_VERSION} ${CMAKE_SYSTEM_PROCESSOR}"
-  )
+    "Target: ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_VERSION} ${CMAKE_SYSTEM_PROCESSOR}")
 endif()
 
 message(STATUS "CMake: ${CMAKE_VERSION}")
