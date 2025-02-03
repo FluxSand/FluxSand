@@ -70,8 +70,8 @@ class AHRS {
       quat_tp_.Publish(quat_);
       eulr_tp_.Publish(eulr_);
       gravity_free_accel_tp_.Publish(filtered_accel_);
-      eulr_without_yaw_tp_.Publish(eulr_without_yaw_);
       quat_without_z_tp_.Publish(quat_without_z_);
+      eulr_without_yaw_tp_.Publish(eulr_without_yaw_);
     }
   }
 
@@ -189,7 +189,7 @@ class AHRS {
 
     Eigen::Vector3f accel_world = r * accel;
 
-    accel_world[2] -= 9.84f;
+    accel_world[2] -= GRAVITY;
 
     Eigen::Vector3<float> accel_filtered = q.inverse() * accel_world;
 
@@ -225,6 +225,15 @@ class AHRS {
     std::cout << std::format(
         "Accel: [x={:+.4f}, y={:+.4f}, z={:+.4f}]] dt={:+.8f}\n",
         filtered_accel_.x, filtered_accel_.y, filtered_accel_.z, dt_);
+  }
+  
+  void DisplyDataWithoutYaw() {
+    std::cout << std::format(
+        "Quaternion: [q0={:+.4f}, q1={:+.4f}, q2={:+.4f}, q3={:+.4f}] | "
+        "Eulr: [rol={:+.4f}, pit={:+.4f}, yaw={:+.4f}]\n",
+        quat_without_z_.q0, quat_without_z_.q1, quat_without_z_.q2,
+        quat_without_z_.q3, eulr_without_yaw_.rol.Value(),
+        eulr_without_yaw_.pit.Value(), eulr_without_yaw_.yaw.Value());
   }
 
   void StartRecordData() {
