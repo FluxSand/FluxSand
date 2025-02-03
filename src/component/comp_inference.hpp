@@ -13,7 +13,7 @@
 #include <map>
 #include <numeric>
 #include <semaphore>
-#include <sstream>  // For formatting tensor shape
+#include <sstream>
 #include <string>
 #include <thread>
 #include <vector>
@@ -24,38 +24,31 @@
 
 /* Model output categories */
 enum class ModelOutput : int8_t {
-  Unrecognized = -1,
-  RightAngle = 0,
-  SharpAngle = 1,
-  Lightning = 2,
-  Triangle = 3,
-  Letter_H = 4,
-  Letter_R = 5,
-  Letter_W = 6,
-  Letter_Phi = 7,
-  Circle = 8,
-  UpAndDown = 9,
-  Horn = 10,
-  Wave = 11,
-  NoMotion = 12
+  UNRECOGNIZED = -1,            // Unrecognized motion
+  SHAKE_FORWARD = 0,            // Quick forward shake
+  SHAKE_BACKWARD = 1,           // Quick backward shake
+  TILT_LEFT = 2,                // Tilt left and hold
+  TILT_RIGHT = 3,               // Tilt right and hold
+  FLIP_OVER = 4,                // Rotate 180 degrees (flip over)
+  ROTATE_CLOCKWISE = 5,         // Rotate clockwise
+  ROTATE_COUNTERCLOCKWISE = 6,  // Rotate counterclockwise
+  SHORT_VIBRATION = 7,          // Short and slight vibration
+  LONG_VIBRATION = 8,           // Sustained and strong vibration
+  STILL = 9                     // No motion or slow, insignificant movement
 };
-
 /* Mapping model output to string labels */
 static const std::map<ModelOutput, std::string> LABELS = {
-    {ModelOutput::Unrecognized, "Unrecognized"},
-    {ModelOutput::RightAngle, "RightAngle"},
-    {ModelOutput::SharpAngle, "SharpAngle"},
-    {ModelOutput::Lightning, "Lightning"},
-    {ModelOutput::Triangle, "Triangle"},
-    {ModelOutput::Letter_H, "Letter_H"},
-    {ModelOutput::Letter_R, "Letter_R"},
-    {ModelOutput::Letter_W, "Letter_W"},
-    {ModelOutput::Letter_Phi, "Letter_Phi"},
-    {ModelOutput::Circle, "Circle"},
-    {ModelOutput::UpAndDown, "UpAndDown"},
-    {ModelOutput::Horn, "Horn"},
-    {ModelOutput::Wave, "Wave"},
-    {ModelOutput::NoMotion, "NoMotion"}};
+    {ModelOutput::UNRECOGNIZED, "Unrecognized"},
+    {ModelOutput::SHAKE_FORWARD, "Shake Forward"},
+    {ModelOutput::SHAKE_BACKWARD, "Shake Backward"},
+    {ModelOutput::TILT_LEFT, "Tilt Left"},
+    {ModelOutput::TILT_RIGHT, "Tilt Right"},
+    {ModelOutput::FLIP_OVER, "Flip Over"},
+    {ModelOutput::ROTATE_CLOCKWISE, "Rotate Clockwise"},
+    {ModelOutput::ROTATE_COUNTERCLOCKWISE, "Rotate Counterclockwise"},
+    {ModelOutput::SHORT_VIBRATION, "Short Vibration"},
+    {ModelOutput::LONG_VIBRATION, "Long Vibration"},
+    {ModelOutput::STILL, "Still"}};
 
 class InferenceEngine {
  public:
@@ -222,7 +215,7 @@ class InferenceEngine {
         std::vector<float> input_data(sensor_buffer_.begin(),
                                       sensor_buffer_.end());
         std::string result = RunInference(input_data);
-        // std::cout << std::format("Inference Result: {}\n", result);
+        std::cout << std::format("Inference Result: {}\n", result);
       }
 
       update_counter++;
