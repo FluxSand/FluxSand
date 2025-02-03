@@ -70,8 +70,8 @@ class AHRS {
       quat_tp_.Publish(quat_);
       eulr_tp_.Publish(eulr_);
       gravity_free_accel_tp_.Publish(filtered_accel_);
-      eulr_without_yaw_tp_.Publish(eulr_without_yaw_);
       quat_without_z_tp_.Publish(quat_without_z_);
+      eulr_without_yaw_tp_.Publish(eulr_without_yaw_);
     }
   }
 
@@ -189,7 +189,7 @@ class AHRS {
 
     Eigen::Vector3f accel_world = r * accel;
 
-    accel_world[2] -= 9.84f;
+    accel_world[2] -= GRAVITY;
 
     Eigen::Vector3<float> accel_filtered = q.inverse() * accel_world;
 

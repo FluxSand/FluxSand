@@ -138,7 +138,8 @@ class Mpu9250 {
 
     /* Read and verify WHO_AM_I register */
     uint8_t who_am_i = spi_device_->ReadRegister(gpio_cs_, WHO_AM_I);
-    std::cout << std::format("MPU9250 WHO_AM_I: 0x{:02X}\n", who_am_i);
+    std::cout << std::format("MPU9250 initialized. WHO_AM_I: 0x{:02X}\n",
+                             who_am_i);
 
     if (who_am_i != 0x71 && who_am_i != 0x68 && who_am_i != 0x70) {
       throw std::runtime_error(std::format(
@@ -257,10 +258,6 @@ class Mpu9250 {
         gyro_.z, temperature_);
   }
 
-  Type::Vector3 accel_; /* Accelerometer data */
-  Type::Vector3 gyro_;  /* Gyroscope data */
-  Type::Vector3 mag_;   /* Magnetometer data */
-
  private:
   /**
    * Writes a value to the AK8963 magnetometer via I2C.
@@ -292,7 +289,8 @@ class Mpu9250 {
   void LoadCalibrationData() {
     std::ifstream file("cali_data.bin", std::ios::in | std::ios::binary);
     if (!file) {
-      std::cerr << "Calibration file not found. Using default values.\n";
+      std::cerr
+          << "MPU9250 calibration file not found. Using default values.\n";
       return;
     }
 
@@ -303,7 +301,8 @@ class Mpu9250 {
 
     if (file_size != sizeof(gyro_bias_)) {
       std::cerr
-          << "Error: Calibration file size mismatch. Using default values.\n";
+          << "Error: MPU9250 calibration file size mismatch. Using default "
+             "values.\n";
       file.close();
       gyro_bias_ = {0, 0, 0};
       return;
@@ -319,15 +318,18 @@ class Mpu9250 {
         std::isnan(gyro_bias_.y) || std::isnan(gyro_bias_.z) ||
         std::isinf(gyro_bias_.x) || std::isinf(gyro_bias_.y) ||
         std::isinf(gyro_bias_.z)) {
-      std::cerr << "Error: Invalid calibration data detected. Resetting to "
-                   "default values.\n";
+      std::cerr
+          << "Error: MPU9250 invalid calibration data detected. Resetting to "
+             "default values.\n";
       gyro_bias_ = {0, 0, 0};
     } else {
-      std::cout << "Calibration data loaded successfully: "
+      std::cout << "MPU9250 calibration data loaded successfully: "
                 << "X=" << gyro_bias_.x << ", "
                 << "Y=" << gyro_bias_.y << ", "
                 << "Z=" << gyro_bias_.z << "\n";
     }
+
+    std::cout << '\n';
   }
 
   /** MPU9250 register addresses */
@@ -355,6 +357,9 @@ class Mpu9250 {
   SpiDevice* spi_device_; /* SPI device handle */
   Gpio* gpio_cs_;         /* GPIO chip select handle */
 
+  Type::Vector3 accel_;      /* Accelerometer data */
+  Type::Vector3 gyro_;       /* Gyroscope data */
+  Type::Vector3 mag_;        /* Magnetometer data */
   Type::Vector3 gyro_delta_; /* Gyroscope delta data */
 
   Type::Vector3 gyro_bias_ = {0, 0, 0}; /* Gyroscope calibration data */

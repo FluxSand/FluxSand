@@ -10,6 +10,10 @@ if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
 endif()
 
 # ---------------------------------------------------------------------------------------
+# ONNX Model Path
+add_compile_definitions(ONNX_MODEL_PATH="${CMAKE_CURRENT_SOURCE_DIR}/model/model.onnx")
+
+# ---------------------------------------------------------------------------------------
 # Project
 project(
   FluxSand
@@ -23,10 +27,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/build)
-
-# ---------------------------------------------------------------------------------------
-# ONNX Model Path
-add_compile_definitions(ONNX_MODEL_PATH="${CMAKE_CURRENT_SOURCE_DIR}/model/model.onnx")
 
 # ---------------------------------------------------------------------------------------
 # Building Options

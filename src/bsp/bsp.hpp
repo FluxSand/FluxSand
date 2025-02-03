@@ -31,6 +31,10 @@
 #define M_1G 9.80665f
 #endif
 
+#ifndef GRAVITY
+#define GRAVITY 9.84f
+#endif
+
 #ifndef MAX
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
