@@ -12,7 +12,7 @@
             "type": "lldb",
             "request": "launch",
             "name": "Debug",
-            "program": "${workspaceFolder}/build/FluxSand.elf",
+            "program": "${workspaceFolder}/build/FluxSand",
             "args": [],
             "cwd": "${workspaceFolder}"
         }

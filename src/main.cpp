@@ -24,10 +24,10 @@ int main() {
 
   InferenceEngine inference_engine(ONNX_MODEL_PATH, 0.1f);
 
-  LibXR::Terminal terminal(ramfs);
-  
+  LibXR::Terminal<128, 128, 10, 20> terminal(ramfs);
+
   ramfs.Add(inference_engine.GetFile());
-  
+
   std::thread terminal_thread([&terminal]() { terminal.ThreadFun(&terminal); });
 
   while (true) {

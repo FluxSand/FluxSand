@@ -25,15 +25,15 @@
 /* Model output categories */
 enum class ModelOutput : int8_t {
   UNRECOGNIZED = -1,            // Unrecognized motion
-  SHAKE_FORWARD = 0,            // Quick forward shake
-  SHAKE_BACKWARD = 1,           // Quick backward shake
-  TILT_LEFT = 2,                // Tilt left and hold
-  TILT_RIGHT = 3,               // Tilt right and hold
-  FLIP_OVER = 4,                // Rotate 180 degrees (flip over)
-  ROTATE_CLOCKWISE = 5,         // Rotate clockwise
-  ROTATE_COUNTERCLOCKWISE = 6,  // Rotate counterclockwise
-  SHORT_VIBRATION = 7,          // Short and slight vibration
-  LONG_VIBRATION = 8,           // Sustained and strong vibration
+  FLIP_OVER = 0,                // Quick forward shake
+  LONG_VIBRATION = 1,           // Quick backward shake
+  ROTATE_CLOCKWISE = 2,         // Tilt left and hold
+  ROTATE_COUNTERCLOCKWISE = 3,  // Tilt right and hold
+  SHAKE_BACKWARD = 4,           // Rotate 180 degrees (flip over)
+  SHAKE_FORWARD = 5,            // Rotate clockwise
+  SHORT_VIBRATION = 6,          // Rotate counterclockwise
+  TILT_LEFT = 7,                // Short and slight vibration
+  TILT_RIGHT = 8,               // Sustained and strong vibration
   STILL = 9                     // No motion or slow, insignificant movement
 };
 /* Mapping model output to string labels */
@@ -60,7 +60,7 @@ class InferenceEngine {
         allocator_(),
         ready_(0) {
     /* Get input topics */
-    gravity_free_accel_tp_ = LibXR::Topic(LibXR::Topic::Find("accel"));
+    gravity_free_accel_tp_ = LibXR::Topic(LibXR::Topic::Find("gravity_free_accel"));
     eulr_without_yaw_tp_ = LibXR::Topic(LibXR::Topic::Find("eulr_without_yaw"));
     gyro_tp_ = LibXR::Topic(LibXR::Topic::Find("gyro"));
 
@@ -151,7 +151,8 @@ class InferenceEngine {
             int length = atoi(argv[2]);
             inference_engine->RecordData(length, argv[3]);
           } else {
-            std::cout << "Usage: inference_engine record <length> <file_prefix>\n";
+            std::cout
+                << "Usage: inference_engine record <length> <file_prefix>\n";
           }
           return 0;
         },
@@ -208,14 +209,14 @@ class InferenceEngine {
       CollectSensorData();
       if (update_counter == new_data_number_) {
         update_counter = 0;
-      }
 
-      /* Perform inference when the buffer has sufficient data */
-      if (sensor_buffer_.size() == input_tensor_size_) {
-        std::vector<float> input_data(sensor_buffer_.begin(),
-                                      sensor_buffer_.end());
-        std::string result = RunInference(input_data);
-        std::cout << std::format("Inference Result: {}\n", result);
+        /* Perform inference when the buffer has sufficient data */
+        if (sensor_buffer_.size() == input_tensor_size_) {
+          std::vector<float> input_data(sensor_buffer_.begin(),
+                                        sensor_buffer_.end());
+          std::string result = RunInference(input_data);
+          std::cout << std::format("Inference Result: {}\n", result);
+        }
       }
 
       update_counter++;
@@ -224,6 +225,11 @@ class InferenceEngine {
 
   /* Collect sensor data from MPU9250 */
   void CollectSensorData() {
+    sensor_buffer_.push_back(eulr_without_yaw_.pit.Value());
+    sensor_buffer_.push_back(eulr_without_yaw_.rol.Value());
+    sensor_buffer_.push_back(gyro_.x);
+    sensor_buffer_.push_back(gyro_.y);
+    sensor_buffer_.push_back(gyro_.z);
     sensor_buffer_.push_back(filtered_accel_.x / GRAVITY);
     sensor_buffer_.push_back(filtered_accel_.y / GRAVITY);
     sensor_buffer_.push_back(filtered_accel_.z / GRAVITY);
@@ -247,6 +253,7 @@ class InferenceEngine {
                      &input_tensor, 1, output_names_cstr_.data(), 1);
 
     float* output_data = output_tensors.front().GetTensorMutableData<float>();
+
     int predicted_label = static_cast<int>(
         std::max_element(output_data, output_data + output_shape_[1]) -
         output_data);
