@@ -4,8 +4,11 @@
 
 #include <atomic>
 #include <chrono>
+#include <ctime>
 #include <deque>
 #include <format>
+#include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <map>
 #include <numeric>
@@ -17,6 +20,7 @@
 
 #include "comp_type.hpp"
 #include "message.hpp"
+#include "ramfs.hpp"
 
 /* Model output categories */
 enum class ModelOutput : int8_t {
@@ -66,7 +70,7 @@ class InferenceEngine {
     gravity_free_accel_tp_ = LibXR::Topic(LibXR::Topic::Find("accel"));
     eulr_without_yaw_tp_ = LibXR::Topic(LibXR::Topic::Find("eulr_without_yaw"));
     gyro_tp_ = LibXR::Topic(LibXR::Topic::Find("gyro"));
-    
+
     /* Retrieve input tensor information */
     size_t num_input_nodes = session_.GetInputCount();
     std::cout << "Model Input Tensors:\n";
@@ -136,13 +140,67 @@ class InferenceEngine {
           memcpy(&self->filtered_accel_, data.addr_, data.size_);
         };
 
-    auto accel_cb = LibXR::Callback<LibXR::RawData&>::Create(acc_ready_cb_fun, this);
-    auto eulr_cb = LibXR::Callback<LibXR::RawData&>::Create(eulr_ready_cb_fun, this);
-    auto gyro_cb = LibXR::Callback<LibXR::RawData&>::Create(gyro_ready_cb_fun, this);
-    
+    auto accel_cb =
+        LibXR::Callback<LibXR::RawData&>::Create(acc_ready_cb_fun, this);
+    auto eulr_cb =
+        LibXR::Callback<LibXR::RawData&>::Create(eulr_ready_cb_fun, this);
+    auto gyro_cb =
+        LibXR::Callback<LibXR::RawData&>::Create(gyro_ready_cb_fun, this);
+
     gravity_free_accel_tp_.RegisterCallback(accel_cb);
     gyro_tp_.RegisterCallback(gyro_cb);
     eulr_without_yaw_tp_.RegisterCallback(eulr_cb);
+
+    cmd_file_ = LibXR::RamFS::CreateFile<InferenceEngine*>(
+        "inference_engine",
+        [](InferenceEngine*& inference_engine, int argc, char** argv) {
+          if (strcmp(argv[1], "record") == 0 && argc == 3) {
+            int length = atoi(argv[2]);
+            inference_engine->RecordData(length);
+          } else {
+            std::cout << "Usage: inference_engine record <length>\n";
+          }
+          return 0;
+        },
+        this);
+  }
+
+  void RecordData(int length) {
+    std::time_t t = std::time(nullptr);
+    std::tm tm = *std::localtime(&t);
+    std::string filename = std::format(
+        "record_{:04}{:02}{:02}_{:02}{:02}{:02}.csv", tm.tm_year + 1900,
+        tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+
+    std::ofstream file(filename);
+    if (!file.is_open()) {
+      std::cerr << std::format("Error opening file: {}\n", filename);
+      return;
+    }
+
+    file << "Pitch,Roll,Gyro_X,Gyro_Y,Gyro_Z,Accel_X,Accel_Y,"
+            "Accel_Z\n";
+
+    std::chrono::microseconds period_us(static_cast<int>(1000));
+
+    std::chrono::steady_clock::time_point next_time =
+        std::chrono::steady_clock::now();
+
+    for (size_t i = 0; i < length; ++i) {
+      file << std::format("{},{},", eulr_without_yaw_.pit.Value(),
+                          eulr_without_yaw_.rol.Value());
+
+      file << std::format("{},{},{},", gyro_.x, gyro_.y, gyro_.z);
+
+      file << std::format("{},{},{}\n", filtered_accel_.x, filtered_accel_.y,
+                          filtered_accel_.z);
+
+      next_time += period_us;
+      std::this_thread::sleep_until(next_time);
+    }
+
+    file.close();
+    std::cout << std::format("Data successfully recorded to {}\n", filename);
   }
 
   /* Inference task loop */
@@ -151,7 +209,7 @@ class InferenceEngine {
 
     while (true) {
       ready_.acquire();
-      
+
       /* Collect new sensor data periodically */
       CollectSensorData();
       if (update_counter == new_data_number_) {
@@ -214,6 +272,8 @@ class InferenceEngine {
     return oss.str();
   }
 
+  LibXR::RamFS::File& GetFile() { return cmd_file_; }
+
  private:
   /* ONNX runtime objects */
   Ort::Env env_;
@@ -249,6 +309,8 @@ class InferenceEngine {
   int new_data_number_;
 
   std::binary_semaphore ready_;
+
+  LibXR::RamFS::File cmd_file_;
 
   /* Background thread for inference */
   std::thread inference_thread_;

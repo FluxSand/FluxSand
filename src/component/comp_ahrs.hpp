@@ -226,6 +226,15 @@ class AHRS {
         "Accel: [x={:+.4f}, y={:+.4f}, z={:+.4f}]] dt={:+.8f}\n",
         filtered_accel_.x, filtered_accel_.y, filtered_accel_.z, dt_);
   }
+  
+  void DisplyDataWithoutYaw() {
+    std::cout << std::format(
+        "Quaternion: [q0={:+.4f}, q1={:+.4f}, q2={:+.4f}, q3={:+.4f}] | "
+        "Eulr: [rol={:+.4f}, pit={:+.4f}, yaw={:+.4f}]\n",
+        quat_without_z_.q0, quat_without_z_.q1, quat_without_z_.q2,
+        quat_without_z_.q3, eulr_without_yaw_.rol.Value(),
+        eulr_without_yaw_.pit.Value(), eulr_without_yaw_.yaw.Value());
+  }
 
   void StartRecordData() {
     record_thread_ = std::thread(&AHRS::RecordTask, this);

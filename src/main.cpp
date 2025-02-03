@@ -20,7 +20,15 @@ int main() {
 
   AHRS ahrs;
 
+  auto ramfs = LibXR::RamFS();
+
   InferenceEngine inference_engine(ONNX_MODEL_PATH, 0.1f);
+
+  LibXR::Terminal terminal(ramfs);
+  
+  ramfs.Add(inference_engine.GetFile());
+  
+  std::thread terminal_thread([&terminal]() { terminal.ThreadFun(&terminal); });
 
   while (true) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
