@@ -14,7 +14,7 @@ int main() {
   LibXR::PlatformInit();
 
   SpiDevice spi_device("/dev/spidev0.0", 1000000, SPI_MODE_0);
-  Gpio gpio_cs("gpiochip0", 14, true, 1);
+  Gpio gpio_cs("gpiochip0", 23, true, 1);
 
   Mpu9250 mpu9250(&spi_device, &gpio_cs);
 
