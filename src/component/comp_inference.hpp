@@ -60,8 +60,8 @@ class InferenceEngine {
         allocator_(),
         ready_(0) {
     /* Get input topics */
-    gravity_free_accel_tp_ = LibXR::Topic(LibXR::Topic::Find("gravity_free_accel"));
-    eulr_without_yaw_tp_ = LibXR::Topic(LibXR::Topic::Find("eulr_without_yaw"));
+    accel_tp_ = LibXR::Topic(LibXR::Topic::Find("accel"));
+    eulr_tp_ = LibXR::Topic(LibXR::Topic::Find("eulr"));
     gyro_tp_ = LibXR::Topic(LibXR::Topic::Find("gyro"));
 
     /* Retrieve input tensor information */
@@ -119,7 +119,7 @@ class InferenceEngine {
 
     void (*eulr_ready_cb_fun)(bool, InferenceEngine*, LibXR::RawData&) =
         [](bool, InferenceEngine* self, LibXR::RawData& data) {
-          memcpy(&self->eulr_without_yaw_, data.addr_, data.size_);
+          memcpy(&self->eulr_, data.addr_, data.size_);
           self->ready_.release();
         };
 
@@ -130,7 +130,7 @@ class InferenceEngine {
 
     void (*acc_ready_cb_fun)(bool, InferenceEngine*, LibXR::RawData&) =
         [](bool, InferenceEngine* self, LibXR::RawData& data) {
-          memcpy(&self->filtered_accel_, data.addr_, data.size_);
+          memcpy(&self->accel_, data.addr_, data.size_);
         };
 
     auto accel_cb =
@@ -140,9 +140,9 @@ class InferenceEngine {
     auto gyro_cb =
         LibXR::Callback<LibXR::RawData&>::Create(gyro_ready_cb_fun, this);
 
-    gravity_free_accel_tp_.RegisterCallback(accel_cb);
+    accel_tp_.RegisterCallback(accel_cb);
     gyro_tp_.RegisterCallback(gyro_cb);
-    eulr_without_yaw_tp_.RegisterCallback(eulr_cb);
+    eulr_tp_.RegisterCallback(eulr_cb);
 
     cmd_file_ = LibXR::RamFS::CreateFile<InferenceEngine*>(
         "inference_engine",
@@ -182,13 +182,13 @@ class InferenceEngine {
         std::chrono::steady_clock::now();
 
     for (size_t i = 0; i < length; ++i) {
-      file << std::format("{},{},", eulr_without_yaw_.pit.Value(),
-                          eulr_without_yaw_.rol.Value());
+      file << std::format("{},{},", eulr_.pit.Value(),
+                          eulr_.rol.Value());
 
       file << std::format("{},{},{},", gyro_.x, gyro_.y, gyro_.z);
 
-      file << std::format("{},{},{}\n", filtered_accel_.x, filtered_accel_.y,
-                          filtered_accel_.z);
+      file << std::format("{},{},{}\n", accel_.x, accel_.y,
+                          accel_.z);
 
       next_time += period_us;
       std::this_thread::sleep_until(next_time);
@@ -225,14 +225,14 @@ class InferenceEngine {
 
   /* Collect sensor data from MPU9250 */
   void CollectSensorData() {
-    sensor_buffer_.push_back(eulr_without_yaw_.pit.Value());
-    sensor_buffer_.push_back(eulr_without_yaw_.rol.Value());
+    sensor_buffer_.push_back(eulr_.pit.Value());
+    sensor_buffer_.push_back(eulr_.rol.Value());
     sensor_buffer_.push_back(gyro_.x);
     sensor_buffer_.push_back(gyro_.y);
     sensor_buffer_.push_back(gyro_.z);
-    sensor_buffer_.push_back(filtered_accel_.x / GRAVITY);
-    sensor_buffer_.push_back(filtered_accel_.y / GRAVITY);
-    sensor_buffer_.push_back(filtered_accel_.z / GRAVITY);
+    sensor_buffer_.push_back(accel_.x / GRAVITY);
+    sensor_buffer_.push_back(accel_.y / GRAVITY);
+    sensor_buffer_.push_back(accel_.z / GRAVITY);
 
     /* Ensure the buffer does not exceed the required tensor size */
     while (sensor_buffer_.size() > input_tensor_size_) {
@@ -283,8 +283,8 @@ class InferenceEngine {
   Ort::AllocatorWithDefaultOptions allocator_;
 
   /* Sensor topics */
-  LibXR::Topic gravity_free_accel_tp_;
-  LibXR::Topic eulr_without_yaw_tp_;
+  LibXR::Topic accel_tp_;
+  LibXR::Topic eulr_tp_;
   LibXR::Topic gyro_tp_;
 
   /* Input tensor metadata */
@@ -302,9 +302,9 @@ class InferenceEngine {
   std::deque<float> sensor_buffer_;
 
   /* Sensor data structures */
-  Type::Eulr eulr_without_yaw_{};
+  Type::Eulr eulr_{};
   Type::Vector3 gyro_{};
-  Type::Vector3 filtered_accel_{};
+  Type::Vector3 accel_{};
 
   /* Determines how frequently new data is added */
   int new_data_number_;
