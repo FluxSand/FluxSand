@@ -30,10 +30,10 @@ class AHRS {
 
     gravity_free_accel_tp_ =
         LibXR::Topic::CreateTopic<Type::Vector3>("gravity_free_accel");
-        
+
     eulr_without_yaw_tp_ =
         LibXR::Topic::CreateTopic<Type::Vector3>("eulr_without_yaw");
-        
+
     quat_without_z_tp_ =
         LibXR::Topic::CreateTopic<Type::Quaternion>("quat_without_z");
 
@@ -64,14 +64,17 @@ class AHRS {
       ready_.acquire();
       Update();
       GetEulr();
-      AccelRemoveGravity();
-      RemoveYaw();
 
       quat_tp_.Publish(quat_);
       eulr_tp_.Publish(eulr_);
+
+#if 0
+      AccelRemoveGravity();
+      RemoveYaw();
       gravity_free_accel_tp_.Publish(filtered_accel_);
       quat_without_z_tp_.Publish(quat_without_z_);
       eulr_without_yaw_tp_.Publish(eulr_without_yaw_);
+#endif
     }
   }
 
@@ -226,7 +229,7 @@ class AHRS {
         "Accel: [x={:+.4f}, y={:+.4f}, z={:+.4f}]] dt={:+.8f}\n",
         filtered_accel_.x, filtered_accel_.y, filtered_accel_.z, dt_);
   }
-  
+
   void DisplyDataWithoutYaw() {
     std::cout << std::format(
         "Quaternion: [q0={:+.4f}, q1={:+.4f}, q2={:+.4f}, q3={:+.4f}] | "

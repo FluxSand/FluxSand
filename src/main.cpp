@@ -22,7 +22,7 @@ int main() {
 
   auto ramfs = LibXR::RamFS();
 
-  InferenceEngine inference_engine(ONNX_MODEL_PATH, 0.1f);
+  InferenceEngine inference_engine(ONNX_MODEL_PATH, 0.2f);
 
   LibXR::Terminal<128, 128, 10, 20> terminal(ramfs);
 

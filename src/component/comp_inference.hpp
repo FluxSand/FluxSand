@@ -24,18 +24,19 @@
 
 /* Model output categories */
 enum class ModelOutput : int8_t {
-  UNRECOGNIZED = -1,            // Unrecognized motion
-  FLIP_OVER = 0,                // Quick forward shake
-  LONG_VIBRATION = 1,           // Quick backward shake
-  ROTATE_CLOCKWISE = 2,         // Tilt left and hold
-  ROTATE_COUNTERCLOCKWISE = 3,  // Tilt right and hold
-  SHAKE_BACKWARD = 4,           // Rotate 180 degrees (flip over)
-  SHAKE_FORWARD = 5,            // Rotate clockwise
-  SHORT_VIBRATION = 6,          // Rotate counterclockwise
-  TILT_LEFT = 7,                // Short and slight vibration
-  TILT_RIGHT = 8,               // Sustained and strong vibration
-  STILL = 9                     // No motion or slow, insignificant movement
+  UNRECOGNIZED = -1,           /* Unrecognized motion */
+  FLIP_OVER = 0,               /* Rotate 180 degrees (flip over) */
+  LONG_VIBRATION = 1,          /* Sustained and strong vibration */
+  ROTATE_CLOCKWISE = 2,        /* Rotate clockwise */
+  ROTATE_COUNTERCLOCKWISE = 3, /* Rotate counterclockwise */
+  SHAKE_BACKWARD = 4,          /* Quick backward shake */
+  SHAKE_FORWARD = 5,           /* Quick forward shake */
+  SHORT_VIBRATION = 6,         /* Short and slight vibration */
+  TILT_LEFT = 7,               /* Tilt left and hold */
+  TILT_RIGHT = 8,              /* Tilt right and hold */
+  STILL = 9                    /* No motion or slow movement */
 };
+
 /* Mapping model output to string labels */
 static const std::map<ModelOutput, std::string> LABELS = {
     {ModelOutput::UNRECOGNIZED, "Unrecognized"},
@@ -59,12 +60,12 @@ class InferenceEngine {
         session_(env_, model_path.c_str(), session_options_),
         allocator_(),
         ready_(0) {
-    /* Get input topics */
-    gravity_free_accel_tp_ = LibXR::Topic(LibXR::Topic::Find("gravity_free_accel"));
-    eulr_without_yaw_tp_ = LibXR::Topic(LibXR::Topic::Find("eulr_without_yaw"));
+    /* Initialize sensor topics */
+    accel_tp_ = LibXR::Topic(LibXR::Topic::Find("accel"));
+    eulr_tp_ = LibXR::Topic(LibXR::Topic::Find("eulr"));
     gyro_tp_ = LibXR::Topic(LibXR::Topic::Find("gyro"));
 
-    /* Retrieve input tensor information */
+    /* Retrieve input tensor metadata */
     size_t num_input_nodes = session_.GetInputCount();
     std::cout << "Model Input Tensors:\n";
 
@@ -75,51 +76,49 @@ class InferenceEngine {
 
       Ort::TypeInfo input_type_info = session_.GetInputTypeInfo(i);
       auto input_tensor_info = input_type_info.GetTensorTypeAndShapeInfo();
-      std::vector<int64_t> input_shape = input_tensor_info.GetShape();
+      input_shape_ = input_tensor_info.GetShape();
 
       /* Handle dynamic batch dimension */
-      if (input_shape[0] == -1) {
-        input_shape[0] = 1;
+      if (input_shape_[0] == -1) {
+        input_shape_[0] = 1;
       }
 
       std::cout << "  Name: " << name.get() << "\n  Shape: ["
-                << VectorToString(input_shape) << "]\n";
+                << VectorToString(input_shape_) << "]\n";
 
-      input_shape_ = input_shape;
       input_tensor_size_ =
           std::accumulate(input_shape_.begin(), input_shape_.end(), 1,
                           std::multiplies<int64_t>());
     }
 
+    /* Retrieve output tensor metadata */
     size_t num_output_nodes = session_.GetOutputCount();
-    auto output_name = session_.GetOutputNameAllocated(0, allocator_);
-
-    /* Retrieve output tensor information */
     for (size_t i = 0; i < num_output_nodes; ++i) {
       output_names_.push_back(
           session_.GetOutputNameAllocated(i, allocator_).get());
       output_names_cstr_.push_back(output_names_.back().c_str());
 
-      Ort::TypeInfo output_type_info = session_.GetOutputTypeInfo(0);
+      Ort::TypeInfo output_type_info = session_.GetOutputTypeInfo(i);
       auto output_tensor_info = output_type_info.GetTensorTypeAndShapeInfo();
       output_shape_ = output_tensor_info.GetShape();
 
-      std::cout << "Model Output Tensor:\n  Name: " << output_name.get()
+      std::cout << "Model Output Tensor:\n  Name: " << output_names_.back()
                 << "\n  Shape: [" << VectorToString(output_shape_) << "]\n";
     }
 
-    /* Calculate update frequency */
+    /* Configure data collection parameters */
     new_data_number_ =
         static_cast<int>(static_cast<float>(input_shape_[1]) * update_ratio);
 
     std::cout << std::format("Model initialized: {}\n\n", model_path);
 
-    /* Start the inference thread */
+    /* Start inference thread */
     inference_thread_ = std::thread(&InferenceEngine::InferenceTask, this);
 
+    /* Setup sensor callbacks */
     void (*eulr_ready_cb_fun)(bool, InferenceEngine*, LibXR::RawData&) =
         [](bool, InferenceEngine* self, LibXR::RawData& data) {
-          memcpy(&self->eulr_without_yaw_, data.addr_, data.size_);
+          memcpy(&self->eulr_, data.addr_, data.size_);
           self->ready_.release();
         };
 
@@ -130,7 +129,7 @@ class InferenceEngine {
 
     void (*acc_ready_cb_fun)(bool, InferenceEngine*, LibXR::RawData&) =
         [](bool, InferenceEngine* self, LibXR::RawData& data) {
-          memcpy(&self->filtered_accel_, data.addr_, data.size_);
+          memcpy(&self->accel_, data.addr_, data.size_);
         };
 
     auto accel_cb =
@@ -140,16 +139,16 @@ class InferenceEngine {
     auto gyro_cb =
         LibXR::Callback<LibXR::RawData&>::Create(gyro_ready_cb_fun, this);
 
-    gravity_free_accel_tp_.RegisterCallback(accel_cb);
+    accel_tp_.RegisterCallback(accel_cb);
     gyro_tp_.RegisterCallback(gyro_cb);
-    eulr_without_yaw_tp_.RegisterCallback(eulr_cb);
+    eulr_tp_.RegisterCallback(eulr_cb);
 
+    /* Initialize command interface */
     cmd_file_ = LibXR::RamFS::CreateFile<InferenceEngine*>(
         "inference_engine",
-        [](InferenceEngine*& inference_engine, int argc, char** argv) {
-          if (strcmp(argv[1], "record") == 0 && argc == 4) {
-            int length = atoi(argv[2]);
-            inference_engine->RecordData(length, argv[3]);
+        [](InferenceEngine*& engine, int argc, char** argv) {
+          if (argc == 4 && strcmp(argv[1], "record") == 0) {
+            engine->RecordData(atoi(argv[2]), argv[3]);
           } else {
             std::cout
                 << "Usage: inference_engine record <length> <file_prefix>\n";
@@ -159,160 +158,182 @@ class InferenceEngine {
         this);
   }
 
-  void RecordData(int length, char* prefix) {
-    std::time_t t = std::time(nullptr);
+  void RecordData(int duration, const char* prefix) {
+    /* Generate timestamped filename */
+    auto t = std::time(nullptr);
     std::tm tm = *std::localtime(&t);
     std::string filename =
         std::format("{}_record_{:04}{:02}{:02}_{:02}{:02}{:02}.csv", prefix,
                     tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
                     tm.tm_min, tm.tm_sec);
 
+    /* Create data file */
     std::ofstream file(filename);
     if (!file.is_open()) {
-      std::cerr << std::format("Error opening file: {}\n", filename);
+      std::cerr << std::format("Failed to create: {}\n", filename);
       return;
     }
 
-    file << "Pitch,Roll,Gyro_X,Gyro_Y,Gyro_Z,Accel_X,Accel_Y,"
-            "Accel_Z\n";
+    /* Write CSV header */
+    file << "Pitch,Roll,Gyro_X,Gyro_Y,Gyro_Z,Accel_X,Accel_Y,Accel_Z\n";
 
-    std::chrono::microseconds period_us(static_cast<int>(1000));
+    /* Collect data at 1kHz */
+    constexpr std::chrono::microseconds RUN_CYCLE(1000);
+    auto next_sample = std::chrono::steady_clock::now();
 
-    std::chrono::steady_clock::time_point next_time =
-        std::chrono::steady_clock::now();
+    for (int i = 0; i < duration; ++i) {
+      file << std::format("{},{},{},{},{},{},{},{}\n", eulr_.pit.Value(),
+                          eulr_.rol.Value(), gyro_.x, gyro_.y, gyro_.z,
+                          accel_.x, accel_.y, accel_.z);
 
-    for (size_t i = 0; i < length; ++i) {
-      file << std::format("{},{},", eulr_without_yaw_.pit.Value(),
-                          eulr_without_yaw_.rol.Value());
-
-      file << std::format("{},{},{},", gyro_.x, gyro_.y, gyro_.z);
-
-      file << std::format("{},{},{}\n", filtered_accel_.x, filtered_accel_.y,
-                          filtered_accel_.z);
-
-      next_time += period_us;
-      std::this_thread::sleep_until(next_time);
+      next_sample += RUN_CYCLE;
+      std::this_thread::sleep_until(next_sample);
     }
 
     file.close();
-    std::cout << std::format("Data successfully recorded to {}\n", filename);
+    std::cout << std::format("Recorded {} samples to {}\n", duration, filename);
   }
 
-  /* Inference task loop */
+  /* Main inference processing loop */
   void InferenceTask() {
     int update_counter = 0;
 
     while (true) {
       ready_.acquire();
 
-      /* Collect new sensor data periodically */
+      /* Update sensor buffer */
       CollectSensorData();
-      if (update_counter == new_data_number_) {
+
+      if (update_counter++ >= new_data_number_) {
         update_counter = 0;
 
-        /* Perform inference when the buffer has sufficient data */
-        if (sensor_buffer_.size() == input_tensor_size_) {
-          std::vector<float> input_data(sensor_buffer_.begin(),
-                                        sensor_buffer_.end());
+        if (sensor_buffer_.size() >= input_tensor_size_) {
+          std::vector<float> input_data(
+              sensor_buffer_.begin(),
+              sensor_buffer_.begin() + static_cast<int>(input_tensor_size_));
           std::string result = RunInference(input_data);
-          std::cout << std::format("Inference Result: {}\n", result);
+          std::cout << std::format("Prediction: {}\n", result);
         }
       }
-
-      update_counter++;
     }
   }
 
-  /* Collect sensor data from MPU9250 */
+  LibXR::RamFS::File& GetFile() { return cmd_file_; }
+
+ private:
+  /* Sensor data collection */
   void CollectSensorData() {
-    sensor_buffer_.push_back(eulr_without_yaw_.pit.Value());
-    sensor_buffer_.push_back(eulr_without_yaw_.rol.Value());
+    /* Normalize and store sensor readings */
+    sensor_buffer_.push_back(eulr_.pit.Value());
+    sensor_buffer_.push_back(eulr_.rol.Value());
     sensor_buffer_.push_back(gyro_.x);
     sensor_buffer_.push_back(gyro_.y);
     sensor_buffer_.push_back(gyro_.z);
-    sensor_buffer_.push_back(filtered_accel_.x / GRAVITY);
-    sensor_buffer_.push_back(filtered_accel_.y / GRAVITY);
-    sensor_buffer_.push_back(filtered_accel_.z / GRAVITY);
+    sensor_buffer_.push_back(accel_.x / GRAVITY);
+    sensor_buffer_.push_back(accel_.y / GRAVITY);
+    sensor_buffer_.push_back(accel_.z / GRAVITY);
 
-    /* Ensure the buffer does not exceed the required tensor size */
+    /* Maintain fixed buffer size */
     while (sensor_buffer_.size() > input_tensor_size_) {
       sensor_buffer_.pop_front();
     }
   }
 
-  /* Perform ONNX inference */
-  std::string RunInference(std::vector<float>& input_data) {
+  /* Execute ONNX inference with temporal smoothing */
+  std::string RunInference(std::vector<float>& input_data,
+                           float confidence_threshold = 0.6f) {
+    /* Validate output dimensions */
+    if (output_shape_.size() < 2 || output_shape_[1] <= 0) {
+      throw std::runtime_error("Invalid model output dimensions");
+    }
+
+    /* Prepare input tensor */
     Ort::MemoryInfo memory_info =
         Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
     Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
         memory_info, input_data.data(), input_data.size(), input_shape_.data(),
         input_shape_.size());
 
-    auto output_tensors =
+    /* Execute inference */
+    auto outputs =
         session_.Run(Ort::RunOptions{nullptr}, input_names_cstr_.data(),
                      &input_tensor, 1, output_names_cstr_.data(), 1);
 
-    float* output_data = output_tensors.front().GetTensorMutableData<float>();
+    /* Process output probabilities */
+    float* probs = outputs.front().GetTensorMutableData<float>();
+    auto max_prob = std::max_element(probs, probs + output_shape_[1]);
+    int pred_class = static_cast<int>(max_prob - probs);
 
-    int predicted_label = static_cast<int>(
-        std::max_element(output_data, output_data + output_shape_[1]) -
-        output_data);
+    /* Apply confidence threshold */
+    if (*max_prob < confidence_threshold) {
+      pred_class = static_cast<int>(ModelOutput::UNRECOGNIZED);
+    }
 
-    return LABELS.count(static_cast<ModelOutput>(predicted_label))
-               ? LABELS.at(static_cast<ModelOutput>(predicted_label))
-               : "Unknown";
+    /* Update prediction history */
+    prediction_history_.push_back(static_cast<ModelOutput>(pred_class));
+    if (prediction_history_.size() > 5) {
+      prediction_history_.pop_front();
+    }
+
+    /* Determine consensus prediction */
+    std::map<ModelOutput, int> votes;
+    for (auto label : prediction_history_) {
+      votes[label]++;
+    }
+
+    auto consensus =
+        std::max_element(votes.begin(), votes.end(),
+                         [](auto& a, auto& b) { return a.second < b.second; });
+
+    /* Return result if consistent, otherwise "No Action" */
+    return (consensus->second >= 3) ? LABELS.at(consensus->first) : "No Action";
   }
 
-  /* Helper function to format vector as a string */
+  /* Helper to format vector for logging */
   template <typename T>
   std::string VectorToString(const std::vector<T>& vec) {
-    std::ostringstream oss;
+    std::stringstream ss;
     for (size_t i = 0; i < vec.size(); ++i) {
-      oss << vec[i] << (i < vec.size() - 1 ? ", " : "");
+      ss << vec[i] << (i < vec.size() - 1 ? ", " : "");
     }
-    return oss.str();
+    return ss.str();
   }
 
-  LibXR::RamFS::File& GetFile() { return cmd_file_; }
-
- private:
-  /* ONNX runtime objects */
+  /* ONNX runtime components */
   Ort::Env env_;
   Ort::SessionOptions session_options_;
   Ort::Session session_;
   Ort::AllocatorWithDefaultOptions allocator_;
 
-  /* Sensor topics */
-  LibXR::Topic gravity_free_accel_tp_;
-  LibXR::Topic eulr_without_yaw_tp_;
+  /* Sensor data interfaces */
+  LibXR::Topic accel_tp_;
+  LibXR::Topic eulr_tp_;
   LibXR::Topic gyro_tp_;
 
-  /* Input tensor metadata */
+  /* Model interface metadata */
   std::vector<std::string> input_names_;
   std::vector<const char*> input_names_cstr_;
   std::vector<int64_t> input_shape_;
   size_t input_tensor_size_;
 
-  /* Output tensor metadata */
   std::vector<std::string> output_names_;
   std::vector<const char*> output_names_cstr_;
   std::vector<int64_t> output_shape_;
 
-  /* Sensor data buffer */
+  /* Data buffers */
   std::deque<float> sensor_buffer_;
+  std::deque<ModelOutput> prediction_history_;
 
-  /* Sensor data structures */
-  Type::Eulr eulr_without_yaw_{};
+  /* Sensor state */
+  Type::Eulr eulr_{};
   Type::Vector3 gyro_{};
-  Type::Vector3 filtered_accel_{};
+  Type::Vector3 accel_{};
 
-  /* Determines how frequently new data is added */
+  /* Thread control */
+  std::binary_semaphore ready_;
+  std::thread inference_thread_;
   int new_data_number_;
 
-  std::binary_semaphore ready_;
-
+  /* System interface */
   LibXR::RamFS::File cmd_file_;
-
-  /* Background thread for inference */
-  std::thread inference_thread_;
 };
