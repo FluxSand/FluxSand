@@ -2,4 +2,4 @@
 .history/**
 build/**
 cali_data.bin
-model/model.onnx
+model/**
