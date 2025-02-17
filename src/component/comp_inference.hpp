@@ -53,13 +53,29 @@ static const std::map<ModelOutput, std::string> LABELS = {
 
 class InferenceEngine {
  public:
+  /**
+   * @brief Constructor for the InferenceEngine.
+   * @param model_path Path to the ONNX model file.
+   * @param update_ratio Ratio for updating the sensor buffer.
+   * @param confidence_threshold Minimum probability required to accept a
+   * prediction.
+   * @param history_size Number of past predictions stored for voting.
+   * @param min_consensus_votes Minimum votes required to confirm a
+   * prediction.
+   */
   explicit InferenceEngine(const std::string& model_path,
-                           float update_ratio = 0.1f)
+                           float update_ratio = 0.1f,
+                           float confidence_threshold = 0.6f,
+                           size_t history_size = 5,
+                           size_t min_consensus_votes = 3)
       : env_(ORT_LOGGING_LEVEL_WARNING, "ONNXModel"),
         session_options_(),
         session_(env_, model_path.c_str(), session_options_),
         allocator_(),
-        ready_(0) {
+        ready_(0),
+        confidence_threshold_(confidence_threshold),
+        history_size_(history_size),
+        min_consensus_votes_(min_consensus_votes) {
     /* Initialize sensor topics */
     accel_tp_ = LibXR::Topic(LibXR::Topic::Find("accel"));
     eulr_tp_ = LibXR::Topic(LibXR::Topic::Find("eulr"));
@@ -211,8 +227,13 @@ class InferenceEngine {
           std::vector<float> input_data(
               sensor_buffer_.begin(),
               sensor_buffer_.begin() + static_cast<int>(input_tensor_size_));
+          static std::string last_result = "";
           std::string result = RunInference(input_data);
-          std::cout << std::format("Prediction: {}\n", result);
+          if (last_result != result && result != "Unrecognized" &&
+              result != "No Action") {
+            std::cout << std::format("Prediction: {}\n", result);
+            last_result = result;
+          }
         }
       }
     }
@@ -239,10 +260,13 @@ class InferenceEngine {
     }
   }
 
-  /* Execute ONNX inference with temporal smoothing */
-  std::string RunInference(std::vector<float>& input_data,
-                           float confidence_threshold = 0.6f) {
-    /* Validate output dimensions */
+  /**
+   * @brief Runs inference on the collected sensor data.
+   * @param input_data Vector containing preprocessed sensor data.
+   * @return The predicted motion category as a string label.
+   */
+  std::string RunInference(std::vector<float>& input_data) {
+    /* Validate output tensor dimensions */
     if (output_shape_.size() < 2 || output_shape_[1] <= 0) {
       throw std::runtime_error("Invalid model output dimensions");
     }
@@ -254,28 +278,28 @@ class InferenceEngine {
         memory_info, input_data.data(), input_data.size(), input_shape_.data(),
         input_shape_.size());
 
-    /* Execute inference */
+    /* Perform inference */
     auto outputs =
         session_.Run(Ort::RunOptions{nullptr}, input_names_cstr_.data(),
                      &input_tensor, 1, output_names_cstr_.data(), 1);
 
-    /* Process output probabilities */
+    /* Get the class with the highest probability */
     float* probs = outputs.front().GetTensorMutableData<float>();
     auto max_prob = std::max_element(probs, probs + output_shape_[1]);
     int pred_class = static_cast<int>(max_prob - probs);
 
     /* Apply confidence threshold */
-    if (*max_prob < confidence_threshold) {
+    if (*max_prob < confidence_threshold_) {
       pred_class = static_cast<int>(ModelOutput::UNRECOGNIZED);
     }
 
     /* Update prediction history */
     prediction_history_.push_back(static_cast<ModelOutput>(pred_class));
-    if (prediction_history_.size() > 5) {
+    if (prediction_history_.size() > history_size_) {
       prediction_history_.pop_front();
     }
 
-    /* Determine consensus prediction */
+    /* Perform majority voting to ensure stable predictions */
     std::map<ModelOutput, int> votes;
     for (auto label : prediction_history_) {
       votes[label]++;
@@ -285,8 +309,12 @@ class InferenceEngine {
         std::max_element(votes.begin(), votes.end(),
                          [](auto& a, auto& b) { return a.second < b.second; });
 
-    /* Return result if consistent, otherwise "No Action" */
-    return (consensus->second >= 3) ? LABELS.at(consensus->first) : "No Action";
+    /* Return the final motion category if consensus is reached */
+    std::string result = (consensus->second >= min_consensus_votes_)
+                             ? LABELS.at(consensus->first)
+                             : "No Action";
+
+    return result;
   }
 
   /* Helper to format vector for logging */
@@ -323,6 +351,13 @@ class InferenceEngine {
   /* Data buffers */
   std::deque<float> sensor_buffer_;
   std::deque<ModelOutput> prediction_history_;
+
+  /* Minimum probability required to accept a prediction */
+  float confidence_threshold_;
+  /* Number of past predictions stored for voting */
+  size_t history_size_;
+  /* Minimum votes required to confirm a prediction */
+  size_t min_consensus_votes_;
 
   /* Sensor state */
   Type::Eulr eulr_{};

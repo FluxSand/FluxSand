@@ -294,7 +294,7 @@ class Mpu9250 {
       return;
     }
 
-    // Check file size
+    /* Check file size */
     file.seekg(0, std::ios::end);
     std::streamsize file_size = file.tellg();
     file.seekg(0, std::ios::beg);
@@ -308,11 +308,11 @@ class Mpu9250 {
       return;
     }
 
-    // Read data
+    /* Read data */
     file.read(reinterpret_cast<char*>(&gyro_bias_), sizeof(gyro_bias_));
     file.close();
 
-    // Validate data: Ensure gyro_bias values are within a reasonable range
+    /* Validate data: Ensure gyro_bias values are within a reasonable range */
     if (std::abs(gyro_bias_.x) > 1.0f || std::abs(gyro_bias_.y) > 1.0f ||
         std::abs(gyro_bias_.z) > 1.0f || std::isnan(gyro_bias_.x) ||
         std::isnan(gyro_bias_.y) || std::isnan(gyro_bias_.z) ||

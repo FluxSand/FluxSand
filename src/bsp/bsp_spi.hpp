@@ -28,7 +28,7 @@ class SpiDevice {
    */
   SpiDevice(const std::string& device, uint32_t speed, uint8_t mode)
       : fd_(open(device.c_str(), O_RDWR)), speed_(speed) {
-    assert(!device.empty());  // Ensure device string is valid
+    assert(!device.empty()); /* Ensure device string is valid */
 
     if (fd_ < 0) {
       throw std::runtime_error("Failed to open SPI device: " + device);
@@ -56,7 +56,7 @@ class SpiDevice {
    * @return Read value
    */
   uint8_t ReadRegister(Gpio* cs, uint8_t reg) {
-    assert(cs);  // Ensure GPIO object is valid
+    assert(cs); /* Ensure GPIO object is valid */
 
     std::array<uint8_t, 2> tx_buf = {{static_cast<uint8_t>(reg | 0x80), 0}};
     std::array<uint8_t, 2> rx_buf = {{0, 0}};
@@ -86,7 +86,7 @@ class SpiDevice {
    * @param value Value to write
    */
   void WriteRegister(Gpio* cs, uint8_t reg, uint8_t value) {
-    assert(cs);  // Ensure GPIO object is valid
+    assert(cs); /* Ensure GPIO object is valid */
 
     std::array<uint8_t, 2> tx_buf = {{reg, value}};
     struct spi_ioc_transfer transfer{};

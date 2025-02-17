@@ -26,7 +26,7 @@ class Gpio {
        int default_value = 1)
       : chip_(gpiod_chip_open_by_name(chip_name.c_str())),
         is_output_(is_output) {
-    assert(!chip_name.empty());  // Ensure chip name is valid
+    assert(!chip_name.empty()); /* Ensure chip name is valid */
 
     if (!chip_) {
       throw std::runtime_error("Failed to open GPIO chip: " + chip_name);
@@ -69,7 +69,7 @@ class Gpio {
    * @param value Value to write (0 or 1)
    */
   void Write(int value) {
-    assert(is_output_);  // Ensure it's in output mode
+    assert(is_output_); /* Ensure it's in output mode */
     if (gpiod_line_set_value(line_, value) < 0) {
       throw std::runtime_error("GPIO write failed");
     }
