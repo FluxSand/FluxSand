@@ -3,6 +3,7 @@
 #include <thread>
 
 #include "bsp_gpio.hpp"
+#include "bsp_pwm.hpp"
 #include "bsp_spi.hpp"
 #include "comp_ahrs.hpp"
 #include "comp_inference.hpp"
@@ -13,8 +14,16 @@
 int main() {
   LibXR::PlatformInit();
 
+  PWM pwm_buzzer(0, 50, 7.5);
+
+  pwm_buzzer.PlayNote(PWM::NoteName::C, 7, 300);
+  pwm_buzzer.PlayNote(PWM::NoteName::D, 7, 300);
+  pwm_buzzer.PlayNote(PWM::NoteName::E, 7, 300);
+
+  pwm_buzzer.Disable();
+
   SpiDevice spi_device("/dev/spidev0.0", 1000000, SPI_MODE_0);
-  Gpio gpio_cs("gpiochip0", 23, true, 1);
+  Gpio gpio_cs("gpiochip0", 22, true, 1);
 
   Mpu9250 mpu9250(&spi_device, &gpio_cs);
 
