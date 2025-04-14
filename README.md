@@ -73,6 +73,17 @@ TODO: Add detailed code organization once development is complete.
 
 ---
 
+## 👉 Division of responsibilities among team members
+
+- **Cong Liu (3055752L)**: [e.g.A]
+- **Xinkai Li (3030890L)**: [e.g. B]
+- **Jiahe Chen (3049643C)**: [e.g. C]
+- **Haoming Wang (2987352W)**: [e.g. D]
+- **Lianxiao Yao (3048246Y)**: [e.g.E]
+- **Yinjie Fan (3062833F)**: [e.g. F]
+
+---
+
 ## **📢 Future Improvements**
 
 🔹 **Additional visual display modes**, such as different sand animations or symbol-based representations.  
