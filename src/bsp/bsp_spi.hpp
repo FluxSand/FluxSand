@@ -130,6 +130,10 @@ class SpiDevice {
     std::memcpy(buffer, rx_buf.data() + 1, length);
   }
 
+  int Fd() const { return fd_; }
+
+  uint32_t Speed() const { return speed_; }
+
  private:
   int fd_;         /* SPI file descriptor */
   uint32_t speed_; /* Transfer speed in Hz */
