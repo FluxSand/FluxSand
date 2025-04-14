@@ -3,6 +3,7 @@
 #include <array>
 #include <cassert>
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <format>
 #include <fstream>
@@ -29,46 +30,41 @@ class Mpu9250 {
    * @param spi_device Pointer to an SPI device object
    * @param gpio_cs    Pointer to a GPIO object (chip select)
    */
-  Mpu9250(SpiDevice* spi_device, Gpio* gpio_cs)
+  Mpu9250(SpiDevice* spi_device, Gpio* gpio_cs, Gpio* gpio_int)
       : spi_device_(spi_device),
         gpio_cs_(gpio_cs),
-        accel_(),
-        gyro_(),
-        mag_(),
+        gpio_int_(gpio_int),
         accel_topic_("accel", true),
         gyro_topic_("gyro", true) {
-    assert(spi_device_ && gpio_cs_);
+    assert(spi_device_ && gpio_cs_ && gpio_int_);
 
     accel_topic_ = LibXR::Topic::CreateTopic<Type::Vector3>("accel");
     gyro_topic_ = LibXR::Topic::CreateTopic<Type::Vector3>("gyro");
 
     Initialize();
     LoadCalibrationData();
-    main_thread_ = std::thread(&Mpu9250::MainThreadTask, this);
-    calibrate_thread_ = std::thread(&Mpu9250::CalibrateThreadTask, this);
-  }
 
-  /**
-   * Thread task that periodically reads and displays sensor data.
-   */
-  void MainThreadTask() {
-    std::chrono::microseconds period_us(static_cast<int>(1000));
-    std::chrono::steady_clock::time_point next_time =
-        std::chrono::steady_clock::now();
-
-    while (true) {
+    /* Register interrupt callback */
+    gpio_int_->EnableInterruptRisingEdgeWithCallback([this]() {
       ReadData();
       accel_topic_.Publish(accel_);
       gyro_topic_.Publish(gyro_);
-      next_time += period_us;
-      std::this_thread::sleep_until(next_time);
+      DisplayData();
+    });
+
+    calibrate_thread_ = std::thread(&Mpu9250::CalibrateThreadTask, this);
+  }
+
+  ~Mpu9250() {
+    if (calibrate_thread_.joinable()) {
+      calibrate_thread_.join();
     }
   }
 
   void CalibrateThreadTask() {
     while (true) {
       auto start_time = std::chrono::steady_clock::now();
-      std::chrono::microseconds period_us(static_cast<int>(1000));
+      std::chrono::microseconds period_us(1000);
       std::chrono::steady_clock::time_point next_time =
           std::chrono::steady_clock::now();
       uint32_t counter = 0;
@@ -81,8 +77,9 @@ class Mpu9250 {
       }
 
       while (true) {
-        if (std::fabsf(gyro_delta_.x) > 0.005 || fabsf(gyro_delta_.y) > 0.005 ||
-            fabsf(gyro_delta_.z) > 0.01) {
+        if (std::fabsf(gyro_delta_.x) > 0.005 ||
+            std::fabsf(gyro_delta_.y) > 0.005 ||
+            std::fabsf(gyro_delta_.z) > 0.01) {
           next_time += period_us;
           std::this_thread::sleep_until(next_time);
           break;
@@ -152,11 +149,11 @@ class Mpu9250 {
     /* Enable Accelerometer and Gyroscope */
     spi_device_->WriteRegister(gpio_cs_, PWR_MGMT_2, 0x00);
 
-    /* Configure I2C Master mode for communication with AK8963 (magnetometer).
-     */
-    spi_device_->WriteRegister(gpio_cs_, INT_PIN_CFG, 0x30);
+    /* INT high level, push-pull */
+    spi_device_->WriteRegister(gpio_cs_, INT_PIN_CFG, 0x10);
+    /* enable data ready interrupt */
+    spi_device_->WriteRegister(gpio_cs_, INT_ENABLE, 0x01);
 
-    /* Set I2C master mode with a clock speed of 400 kHz. */
     spi_device_->WriteRegister(gpio_cs_, I2C_MST_CTRL, 0x4D);
 
     /* Enable I2C Master mode by setting the I2C_MST_EN bit in USER_CTRL. */
@@ -172,7 +169,7 @@ class Mpu9250 {
     spi_device_->WriteRegister(gpio_cs_, CONFIG, 3);
 
     /* Set the gyroscope sampling rate. */
-    spi_device_->WriteRegister(gpio_cs_, SMPLRT_DIV, 0x01);
+    spi_device_->WriteRegister(gpio_cs_, SMPLRT_DIV, 0x00);
 
     /* Configure gyroscope full-scale range to ±2000°/s. */
     spi_device_->WriteRegister(gpio_cs_, GYRO_CONFIG, 0x18);
@@ -248,17 +245,16 @@ class Mpu9250 {
    * Displays the most recently read sensor data.
    */
   void DisplayData() {
-    float accel_instensity =
-        sqrt(accel_.x * accel_.x + accel_.y * accel_.y + accel_.z * accel_.z);
+    float accel_intensity = std::sqrt(
+        accel_.x * accel_.x + accel_.y * accel_.y + accel_.z * accel_.z);
     std::cout << std::format(
         "Acceleration: [X={:+.4f}, Y={:+.4f}, Z={:+.4f} | Intensity={:+.4f}] | "
-        "Gyroscope: "
-        "[X={:+.4f}, Y={:+.4f}, Z={:+.4f}] | Temperature: {:+.4f} °C\n",
-        accel_.x, accel_.y, accel_.z, accel_instensity, gyro_.x, gyro_.y,
+        "Gyroscope: [X={:+.4f}, Y={:+.4f}, Z={:+.4f}] | Temperature: {:+.4f} "
+        "\u00b0C\n",
+        accel_.x, accel_.y, accel_.z, accel_intensity, gyro_.x, gyro_.y,
         gyro_.z, temperature_);
   }
 
- private:
   /**
    * Writes a value to the AK8963 magnetometer via I2C.
    *
@@ -345,6 +341,7 @@ class Mpu9250 {
   static constexpr uint8_t GYRO_XOUT_H = 0x43;
   static constexpr uint8_t USER_CTRL = 0x6A;
   static constexpr uint8_t INT_PIN_CFG = 0x37;
+  static constexpr uint8_t INT_ENABLE = 0x38;
   static constexpr uint8_t I2C_MST_CTRL = 0x24;
   static constexpr uint8_t I2C_MST_DELAY_CTRL = 0x67;
   static constexpr uint8_t I2C_SLV0_CTRL = 0x27;
@@ -356,6 +353,7 @@ class Mpu9250 {
 
   SpiDevice* spi_device_; /* SPI device handle */
   Gpio* gpio_cs_;         /* GPIO chip select handle */
+  Gpio* gpio_int_;        /* GPIO interrupt handle */
 
   Type::Vector3 accel_;      /* Accelerometer data */
   Type::Vector3 gyro_;       /* Gyroscope data */
@@ -369,5 +367,5 @@ class Mpu9250 {
   LibXR::Topic accel_topic_; /* Accelerometer topic */
   LibXR::Topic gyro_topic_;  /* Gyroscope topic */
 
-  std::thread main_thread_, calibrate_thread_; /* Thread */
+  std::thread calibrate_thread_; /* Thread */
 };
