@@ -22,10 +22,11 @@ int main() {
 
   pwm_buzzer.Disable();
 
-  SpiDevice spi_device("/dev/spidev0.0", 1000000, SPI_MODE_0);
-  Gpio gpio_cs("gpiochip0", 22, true, 1);
+  SpiDevice spi_imu_device("/dev/spidev0.0", 1000000, SPI_MODE_0);
+  Gpio gpio_imu_cs("gpiochip0", 22, true, 1);
+  Gpio gpio_imu_int("gpiochip0", 27, false, 1);
 
-  Mpu9250 mpu9250(&spi_device, &gpio_cs);
+  Mpu9250 mpu9250(&spi_imu_device, &gpio_imu_cs, &gpio_imu_int);
 
   AHRS ahrs;
 
