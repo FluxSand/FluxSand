@@ -8,6 +8,7 @@
 #include "comp_ahrs.hpp"
 #include "comp_inference.hpp"
 #include "libxr.hpp"
+#include "max7219.hpp"
 #include "message.hpp"
 #include "mpu9250.hpp"
 
@@ -21,6 +22,14 @@ int main() {
   pwm_buzzer.PlayNote(PWM::NoteName::E, 7, 300);
 
   pwm_buzzer.Disable();
+
+  SpiDevice spi_display("/dev/spidev1.0", 1000000, SPI_MODE_0);
+  Gpio gpio_display_cs("gpiochip0", 26, true, 1);
+
+  Max7219<8> display(spi_display, &gpio_display_cs);  // 只测试 1 个芯片
+  display.Initialize();
+  
+  display.TestEachChip();
 
   SpiDevice spi_imu_device("/dev/spidev0.0", 1000000, SPI_MODE_0);
   Gpio gpio_imu_cs("gpiochip0", 22, true, 1);
