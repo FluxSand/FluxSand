@@ -96,6 +96,20 @@ class I2cDevice {
   }
 
   /**
+   * Writes raw bytes directly to the I2C device without a register prefix.
+   *
+   * @param data   Pointer to raw data buffer
+   * @param length Number of bytes to write
+   */
+  void WriteRaw(const uint8_t* data, size_t length) {
+    assert(data);
+
+    if (write(fd_, data, length) != static_cast<ssize_t>(length)) {
+      throw std::runtime_error("I2C raw write failed");
+    }
+  }
+
+  /**
    * Returns the underlying file descriptor.
    */
   int Fd() const { return fd_; }
