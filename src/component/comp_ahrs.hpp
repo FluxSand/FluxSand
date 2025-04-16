@@ -9,8 +9,6 @@
 
 #include "bsp.hpp"
 #include "comp_type.hpp"
-#include "message.hpp"
-#include "transform.hpp"
 
 class AHRS {
  public:
@@ -24,38 +22,6 @@ class AHRS {
         std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::system_clock::now().time_since_epoch());
 
-    quat_tp_ = LibXR::Topic::CreateTopic<Type::Quaternion>("quat");
-
-    eulr_tp_ = LibXR::Topic::CreateTopic<Type::Vector3>("eulr");
-
-    gravity_free_accel_tp_ =
-        LibXR::Topic::CreateTopic<Type::Vector3>("gravity_free_accel");
-
-    eulr_without_yaw_tp_ =
-        LibXR::Topic::CreateTopic<Type::Vector3>("eulr_without_yaw");
-
-    quat_without_z_tp_ =
-        LibXR::Topic::CreateTopic<Type::Quaternion>("quat_without_z");
-
-    void (*accl_ready_cb_fun)(bool, AHRS*, LibXR::RawData&) =
-        [](bool, AHRS* ahrs, LibXR::RawData& data) {
-          memcpy(&ahrs->accel_, data.addr_, data.size_);
-        };
-
-    void (*gyro_ready_cb_fun)(bool, AHRS*, LibXR::RawData&) =
-        [](bool, AHRS* ahrs, LibXR::RawData& data) {
-          memcpy(&ahrs->gyro_, data.addr_, data.size_);
-          ahrs->ready_.release();
-        };
-
-    auto accl_cb =
-        LibXR::Callback<LibXR::RawData&>::Create(accl_ready_cb_fun, this);
-    auto gyro_cb =
-        LibXR::Callback<LibXR::RawData&>::Create(gyro_ready_cb_fun, this);
-
-    LibXR::Topic(LibXR::Topic::Find("accel")).RegisterCallback(accl_cb);
-    LibXR::Topic(LibXR::Topic::Find("gyro")).RegisterCallback(gyro_cb);
-
     thread_ = std::thread(&AHRS::ThreadTask, this);
   }
 
@@ -64,17 +30,6 @@ class AHRS {
       ready_.acquire();
       Update();
       GetEulr();
-
-      quat_tp_.Publish(quat_);
-      eulr_tp_.Publish(eulr_);
-
-#if 0
-      AccelRemoveGravity();
-      RemoveYaw();
-      gravity_free_accel_tp_.Publish(filtered_accel_);
-      quat_without_z_tp_.Publish(quat_without_z_);
-      eulr_without_yaw_tp_.Publish(eulr_without_yaw_);
-#endif
     }
   }
 
@@ -176,47 +131,7 @@ class AHRS {
     quat_.q3 *= recip_norm;
   }
 
-  void GetEulr() {
-    LibXR::Quaternion<float> q(quat_.q0, quat_.q1, quat_.q2, quat_.q3);
-    LibXR::EulerAngle<float> eulr = q.toEulerAngle();
-    eulr_.pit = eulr.pitch_;
-    eulr_.rol = eulr.roll_;
-    eulr_.yaw = eulr.yaw_;
-  }
-
-  void AccelRemoveGravity() {
-    LibXR::Quaternion<float> q(quat_.q0, quat_.q1, quat_.q2, quat_.q3);
-    LibXR::RotationMatrix<float> r = q.toRotationMatrix();
-
-    Eigen::Vector3f accel(accel_.x, accel_.y, accel_.z);
-
-    Eigen::Vector3f accel_world = r * accel;
-
-    accel_world[2] -= GRAVITY;
-
-    Eigen::Vector3<float> accel_filtered = q.inverse() * accel_world;
-
-    filtered_accel_.x = accel_filtered[0];
-    filtered_accel_.y = accel_filtered[1];
-    filtered_accel_.z = accel_filtered[2];
-  }
-
-  void RemoveYaw() {
-    eulr_without_yaw_.pit = eulr_.pit;
-    eulr_without_yaw_.rol = eulr_.rol;
-    eulr_without_yaw_.yaw = 0.0f;
-
-    LibXR::EulerAngle<float> eulr_without_yaw(eulr_without_yaw_.rol.Value(),
-                                              eulr_without_yaw_.pit.Value(),
-                                              eulr_without_yaw_.yaw.Value());
-
-    LibXR::Quaternion<float> q_without_yaw = eulr_without_yaw.toQuaternion();
-
-    quat_without_z_.q0 = q_without_yaw.w();
-    quat_without_z_.q1 = q_without_yaw.x();
-    quat_without_z_.q2 = q_without_yaw.y();
-    quat_without_z_.q3 = q_without_yaw.z();
-  }
+  void GetEulr() {}
 
   void DisplayData() {
     std::cout << std::format(
@@ -271,12 +186,6 @@ class AHRS {
   std::chrono::duration<uint64_t, std::ratio<1, 1000000>> now_;
   std::chrono::duration<uint64_t, std::ratio<1, 1000000>> start_;
   float dt_ = 0.0f;
-
-  LibXR::Topic quat_tp_;
-  LibXR::Topic eulr_tp_;
-  LibXR::Topic gravity_free_accel_tp_;
-  LibXR::Topic quat_without_z_tp_;
-  LibXR::Topic eulr_without_yaw_tp_;
 
   Type::Quaternion quat_{};
   Type::Eulr eulr_{};

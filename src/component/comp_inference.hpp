@@ -19,8 +19,6 @@
 #include <vector>
 
 #include "comp_type.hpp"
-#include "message.hpp"
-#include "ramfs.hpp"
 
 /* Model output categories */
 enum class ModelOutput : int8_t {
@@ -76,11 +74,6 @@ class InferenceEngine {
         confidence_threshold_(confidence_threshold),
         history_size_(history_size),
         min_consensus_votes_(min_consensus_votes) {
-    /* Initialize sensor topics */
-    accel_tp_ = LibXR::Topic(LibXR::Topic::Find("accel"));
-    eulr_tp_ = LibXR::Topic(LibXR::Topic::Find("eulr"));
-    gyro_tp_ = LibXR::Topic(LibXR::Topic::Find("gyro"));
-
     /* Retrieve input tensor metadata */
     size_t num_input_nodes = session_.GetInputCount();
     std::cout << "Model Input Tensors:\n";
@@ -130,48 +123,6 @@ class InferenceEngine {
 
     /* Start inference thread */
     inference_thread_ = std::thread(&InferenceEngine::InferenceTask, this);
-
-    /* Setup sensor callbacks */
-    void (*eulr_ready_cb_fun)(bool, InferenceEngine*, LibXR::RawData&) =
-        [](bool, InferenceEngine* self, LibXR::RawData& data) {
-          memcpy(&self->eulr_, data.addr_, data.size_);
-          self->ready_.release();
-        };
-
-    void (*gyro_ready_cb_fun)(bool, InferenceEngine*, LibXR::RawData&) =
-        [](bool, InferenceEngine* self, LibXR::RawData& data) {
-          memcpy(&self->gyro_, data.addr_, data.size_);
-        };
-
-    void (*acc_ready_cb_fun)(bool, InferenceEngine*, LibXR::RawData&) =
-        [](bool, InferenceEngine* self, LibXR::RawData& data) {
-          memcpy(&self->accel_, data.addr_, data.size_);
-        };
-
-    auto accel_cb =
-        LibXR::Callback<LibXR::RawData&>::Create(acc_ready_cb_fun, this);
-    auto eulr_cb =
-        LibXR::Callback<LibXR::RawData&>::Create(eulr_ready_cb_fun, this);
-    auto gyro_cb =
-        LibXR::Callback<LibXR::RawData&>::Create(gyro_ready_cb_fun, this);
-
-    accel_tp_.RegisterCallback(accel_cb);
-    gyro_tp_.RegisterCallback(gyro_cb);
-    eulr_tp_.RegisterCallback(eulr_cb);
-
-    /* Initialize command interface */
-    cmd_file_ = LibXR::RamFS::CreateFile<InferenceEngine*>(
-        "inference_engine",
-        [](InferenceEngine*& engine, int argc, char** argv) {
-          if (argc == 4 && strcmp(argv[1], "record") == 0) {
-            engine->RecordData(atoi(argv[2]), argv[3]);
-          } else {
-            std::cout
-                << "Usage: inference_engine record <length> <file_prefix>\n";
-          }
-          return 0;
-        },
-        this);
   }
 
   void RecordData(int duration, const char* prefix) {
@@ -238,8 +189,6 @@ class InferenceEngine {
       }
     }
   }
-
-  LibXR::RamFS::File& GetFile() { return cmd_file_; }
 
  private:
   /* Sensor data collection */
@@ -333,11 +282,6 @@ class InferenceEngine {
   Ort::Session session_;
   Ort::AllocatorWithDefaultOptions allocator_;
 
-  /* Sensor data interfaces */
-  LibXR::Topic accel_tp_;
-  LibXR::Topic eulr_tp_;
-  LibXR::Topic gyro_tp_;
-
   /* Model interface metadata */
   std::vector<std::string> input_names_;
   std::vector<const char*> input_names_cstr_;
@@ -368,7 +312,4 @@ class InferenceEngine {
   std::binary_semaphore ready_;
   std::thread inference_thread_;
   int new_data_number_;
-
-  /* System interface */
-  LibXR::RamFS::File cmd_file_;
 };

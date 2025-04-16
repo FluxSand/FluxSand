@@ -15,7 +15,6 @@
 #include "bsp_gpio.hpp"
 #include "bsp_spi.hpp"
 #include "comp_type.hpp"
-#include "message.hpp"
 
 /**
  * MPU9250 class
@@ -31,26 +30,14 @@ class Mpu9250 {
    * @param gpio_cs    Pointer to a GPIO object (chip select)
    */
   Mpu9250(SpiDevice* spi_device, Gpio* gpio_cs, Gpio* gpio_int)
-      : spi_device_(spi_device),
-        gpio_cs_(gpio_cs),
-        gpio_int_(gpio_int),
-        accel_topic_("accel", true),
-        gyro_topic_("gyro", true) {
+      : spi_device_(spi_device), gpio_cs_(gpio_cs), gpio_int_(gpio_int) {
     assert(spi_device_ && gpio_cs_ && gpio_int_);
-
-    accel_topic_ = LibXR::Topic::CreateTopic<Type::Vector3>("accel");
-    gyro_topic_ = LibXR::Topic::CreateTopic<Type::Vector3>("gyro");
 
     Initialize();
     LoadCalibrationData();
 
     /* Register interrupt callback */
-    gpio_int_->EnableInterruptRisingEdgeWithCallback([this]() {
-      ReadData();
-      accel_topic_.Publish(accel_);
-      gyro_topic_.Publish(gyro_);
-      DisplayData();
-    });
+    gpio_int_->EnableInterruptRisingEdgeWithCallback([this]() { ReadData(); });
 
     calibrate_thread_ = std::thread(&Mpu9250::CalibrateThreadTask, this);
   }
@@ -363,9 +350,6 @@ class Mpu9250 {
   Type::Vector3 gyro_bias_ = {0, 0, 0}; /* Gyroscope calibration data */
 
   float temperature_ = 0; /* Temperature data */
-
-  LibXR::Topic accel_topic_; /* Accelerometer topic */
-  LibXR::Topic gyro_topic_;  /* Gyroscope topic */
 
   std::thread calibrate_thread_; /* Thread */
 };

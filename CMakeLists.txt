@@ -90,15 +90,6 @@ set(CMAKE_CXX_FLAGS "-stdlib=libc++")
 target_compile_options(${PROJECT_NAME} PRIVATE ${GPIOD_CFLAGS_OTHER})
 
 # ---------------------------------------------------------------------------------------
-# libxr
-set(LIBXR_DEFAULT_SCALAR "float")
-add_compile_definitions(LIBXR_DEFAULT_SCALAR=${LIBXR_DEFAULT_SCALAR})
-
-add_subdirectory(third_party/libxr)
-
-target_link_libraries(${PROJECT_NAME} xr)
-
-# ---------------------------------------------------------------------------------------
 # OnnxRuntime
 find_package(onnxruntime REQUIRED)
 include_directories(
