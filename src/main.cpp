@@ -2,6 +2,7 @@
 #include <iostream>
 #include <thread>
 
+#include "aht20.hpp"
 #include "bmp280.hpp"
 #include "bsp_gpio.hpp"
 #include "bsp_i2c.hpp"
@@ -30,9 +31,10 @@ int main() {
 
   Max7219<8> display(spi_display, &gpio_display_cs);
 
-
   I2cDevice i2c("/dev/i2c-1", Bmp280::DEFAULT_I2C_ADDR);
   Bmp280 bmp(i2c);
+  I2cDevice i2c_1("/dev/i2c-1", Aht20::DEFAULT_I2C_ADDR);
+  Aht20 aht20(i2c_1);
 
   SpiDevice spi_imu_device("/dev/spidev0.0", 1000000, SPI_MODE_0);
   Gpio gpio_imu_cs("gpiochip0", 22, true, 1);
