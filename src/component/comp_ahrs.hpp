@@ -5,6 +5,7 @@
 */
 
 #include <fstream>
+#include <functional>
 #include <semaphore>
 
 #include "bsp.hpp"
@@ -23,6 +24,12 @@ class AHRS {
             std::chrono::system_clock::now().time_since_epoch());
 
     thread_ = std::thread(&AHRS::ThreadTask, this);
+  }
+
+  void OnData(const Type::Vector3& accel, const Type::Vector3& gyro) {
+    accel_ = accel;
+    gyro_ = gyro;
+    ready_.release();
   }
 
   void ThreadTask() {
@@ -131,7 +138,22 @@ class AHRS {
     quat_.q3 *= recip_norm;
   }
 
-  void GetEulr() {}
+  void GetEulr() {
+    float yaw = std::atan2(2 * (quat_.q0 * quat_.q3 + quat_.q1 * quat_.q2),
+                           1 - 2 * (quat_.q3 * quat_.q3 + quat_.q2 * quat_.q2));
+    float pitch = std::asin(2 * (quat_.q0 * quat_.q2 - quat_.q1 * quat_.q3));
+    float roll =
+        std::atan2(2 * (quat_.q0 * quat_.q1 + quat_.q2 * quat_.q3),
+                   1 - 2 * (quat_.q2 * quat_.q2 + quat_.q1 * quat_.q1));
+
+    eulr_.pit = pitch;
+    eulr_.rol = roll;
+    eulr_.yaw = yaw;
+    
+    if (data_callback_) {
+      data_callback_(accel_, gyro_, eulr_);
+    }
+  }
 
   void DisplayData() {
     std::cout << std::format(
@@ -181,6 +203,12 @@ class AHRS {
     }
   }
 
+  void RegisterDataCallback(
+      const std::function<void(const Type::Vector3&, const Type::Vector3&,
+                               const Type::Eulr&)>& callback) {
+    data_callback_ = callback;
+  }
+
  private:
   std::chrono::duration<uint64_t, std::ratio<1, 1000000>> last_wakeup_;
   std::chrono::duration<uint64_t, std::ratio<1, 1000000>> now_;
@@ -197,6 +225,10 @@ class AHRS {
   Type::Vector3 filtered_accel_{};
 
   std::binary_semaphore ready_;
+
+  std::function<void(const Type::Vector3& acc, const Type::Vector3& gyro,
+                     const Type::Eulr& eulr)>
+      data_callback_;
 
   std::thread thread_, record_thread_; /* Thread */
 };

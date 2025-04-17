@@ -8,6 +8,7 @@
 #include <deque>
 #include <format>
 #include <fstream>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <map>
@@ -178,16 +179,29 @@ class InferenceEngine {
           std::vector<float> input_data(
               sensor_buffer_.begin(),
               sensor_buffer_.begin() + static_cast<int>(input_tensor_size_));
-          static std::string last_result = "";
-          std::string result = RunInference(input_data);
-          if (last_result != result && result != "Unrecognized" &&
-              result != "No Action") {
-            std::cout << std::format("Prediction: {}\n", result);
+          static ModelOutput last_result = ModelOutput::UNRECOGNIZED;
+          ModelOutput result = RunInference(input_data);
+          if (last_result != result && result != ModelOutput::UNRECOGNIZED) {
             last_result = result;
+            if (data_callback_) {
+              data_callback_(result);
+            }
           }
         }
       }
     }
+  }
+
+  void OnData(const Type::Vector3& accel, const Type::Vector3& gyro,
+              const Type::Eulr& eulr) {
+    accel_ = accel;
+    gyro_ = gyro;
+    eulr_ = eulr;
+    ready_.release();
+  }
+
+  void RegisterDataCallback(const std::function<void(ModelOutput)>& callback) {
+    data_callback_ = callback;
   }
 
  private:
@@ -214,7 +228,7 @@ class InferenceEngine {
    * @param input_data Vector containing preprocessed sensor data.
    * @return The predicted motion category as a string label.
    */
-  std::string RunInference(std::vector<float>& input_data) {
+  ModelOutput RunInference(std::vector<float>& input_data) {
     /* Validate output tensor dimensions */
     if (output_shape_.size() < 2 || output_shape_[1] <= 0) {
       throw std::runtime_error("Invalid model output dimensions");
@@ -259,9 +273,9 @@ class InferenceEngine {
                          [](auto& a, auto& b) { return a.second < b.second; });
 
     /* Return the final motion category if consensus is reached */
-    std::string result = (consensus->second >= min_consensus_votes_)
-                             ? LABELS.at(consensus->first)
-                             : "No Action";
+    ModelOutput result = (consensus->second >= min_consensus_votes_)
+                             ? consensus->first
+                             : ModelOutput::UNRECOGNIZED;
 
     return result;
   }
@@ -307,6 +321,9 @@ class InferenceEngine {
   Type::Eulr eulr_{};
   Type::Vector3 gyro_{};
   Type::Vector3 accel_{};
+
+  /* Callback function */
+  std::function<void(ModelOutput)> data_callback_;
 
   /* Thread control */
   std::binary_semaphore ready_;

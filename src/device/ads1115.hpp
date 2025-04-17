@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <functional>
+#include <iostream>
 #include <stdexcept>
 #include <thread>
 
@@ -83,9 +84,9 @@ class Ads1115 {
    */
   void Display() const {
     for (int i = 0; i < CHANNEL_NUM; ++i) {
-      printf("Channel %d: %.4f V  ", i, voltages_[i]);
+      std::cout << "Channel " << i << ": " << voltages_[i] << " V  ";
     }
-    printf("\n");
+    std::cout << '\n';
   }
 
   /**

@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <format>
 #include <fstream>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <stdexcept>
@@ -110,6 +111,18 @@ class Mpu9250 {
   }
 
   /**
+   * @brief Registers a callback function to be called when new data is
+   * available.
+   *
+   * @param callback The callback function
+   */
+  void RegisterDataCallback(
+      const std::function<void(const Type::Vector3&, const Type::Vector3&)>&
+          callback) {
+    data_callback_ = callback;
+  }
+
+  /**
    * Initializes MPU9250 settings.
    *
    * Configures power management, digital low-pass filter, sensor ranges,
@@ -191,13 +204,13 @@ class Mpu9250 {
     uint8_t* temperature_data = &data[6];
     uint8_t* gyro_data = &data[8];
 
-    accel_.x = static_cast<float>(
+    accel_.z = -static_cast<float>(
                    static_cast<int16_t>((accel_data[0] << 8) | accel_data[1])) *
                ACCEL_SCALE;
     accel_.y = static_cast<float>(
                    static_cast<int16_t>((accel_data[2] << 8) | accel_data[3])) *
                ACCEL_SCALE;
-    accel_.z = static_cast<float>(
+    accel_.x = static_cast<float>(
                    static_cast<int16_t>((accel_data[4] << 8) | accel_data[5])) *
                ACCEL_SCALE;
 
@@ -206,15 +219,15 @@ class Mpu9250 {
                        333.87f +
                    21.0f;
 
-    float gyro_x = static_cast<float>(static_cast<int16_t>((gyro_data[0] << 8) |
-                                                           gyro_data[1])) *
+    float gyro_z = -static_cast<float>(static_cast<int16_t>(
+                       (gyro_data[0] << 8) | gyro_data[1])) *
                        GYRO_SCALE -
                    gyro_bias_.x;
     float gyro_y = static_cast<float>(static_cast<int16_t>((gyro_data[2] << 8) |
                                                            gyro_data[3])) *
                        GYRO_SCALE -
                    gyro_bias_.y;
-    float gyro_z = static_cast<float>(static_cast<int16_t>((gyro_data[4] << 8) |
+    float gyro_x = static_cast<float>(static_cast<int16_t>((gyro_data[4] << 8) |
                                                            gyro_data[5])) *
                        GYRO_SCALE -
                    gyro_bias_.z;
@@ -226,6 +239,10 @@ class Mpu9250 {
     gyro_.x = gyro_x;
     gyro_.y = gyro_y;
     gyro_.z = gyro_z;
+
+    if (data_callback_) {
+      data_callback_(accel_, gyro_);
+    }
   }
 
   /**
@@ -350,6 +367,9 @@ class Mpu9250 {
   Type::Vector3 gyro_bias_ = {0, 0, 0}; /* Gyroscope calibration data */
 
   float temperature_ = 0; /* Temperature data */
+
+  std::function<void(const Type::Vector3& accel, const Type::Vector3& gyro)>
+      data_callback_; /* Data callback function */
 
   std::thread calibrate_thread_; /* Thread */
 };
