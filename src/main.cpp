@@ -10,6 +10,7 @@
 #include "bsp_pwm.hpp"
 #include "bsp_spi.hpp"
 #include "comp_ahrs.hpp"
+#include "comp_gui.hpp"
 #include "comp_inference.hpp"
 #include "fluxsand.hpp"
 #include "max7219.hpp"
@@ -62,10 +63,13 @@ int main() {
       &InferenceEngine::OnData, &inference_engine, std::placeholders::_1,
       std::placeholders::_2, std::placeholders::_3));
 
+  CompGuiX gui(display);
+
+  gui.Clear();
+
   /* Main loop */
-  FluxSand fluxsand(&pwm_buzzer, &gpio_user_button_1, &gpio_user_button_2,
-                    &display, &bmp280, &aht20, &ads1115, &ahrs,
-                    &inference_engine);
+  FluxSand fluxsand(&pwm_buzzer, &gpio_user_button_1, &gpio_user_button_2, &gui,
+                    &bmp280, &aht20, &ads1115, &ahrs, &inference_engine);
 
   while (true) {
     fluxsand.Run();
