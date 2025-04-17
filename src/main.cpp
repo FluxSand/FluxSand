@@ -11,6 +11,7 @@
 #include "bsp_spi.hpp"
 #include "comp_ahrs.hpp"
 #include "comp_inference.hpp"
+#include "fluxsand.hpp"
 #include "max7219.hpp"
 #include "mpu9250.hpp"
 
@@ -61,8 +62,13 @@ int main() {
       &InferenceEngine::OnData, &inference_engine, std::placeholders::_1,
       std::placeholders::_2, std::placeholders::_3));
 
+  /* Main loop */
+  FluxSand fluxsand(&pwm_buzzer, &gpio_user_button_1, &gpio_user_button_2,
+                    &display, &bmp280, &aht20, &ads1115, &ahrs,
+                    &inference_engine);
+
   while (true) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    fluxsand.Run();
   }
 
   return 0;
