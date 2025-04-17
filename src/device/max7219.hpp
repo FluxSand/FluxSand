@@ -51,7 +51,7 @@ class Max7219 {
 
     while (true) {
       Refresh();
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
   }
 
@@ -63,7 +63,7 @@ class Max7219 {
       WriteToChip(i, REG_DISPLAY_TEST, 0x00); /* Normal operation */
       WriteToChip(i, REG_DECODE_MODE, 0x00);  /* Matrix mode (no decoding) */
       WriteToChip(i, REG_SCAN_LIMIT, 0x07);   /* Scan all 8 rows */
-      WriteToChip(i, REG_INTENSITY, 0x08);    /* Medium brightness */
+      WriteToChip(i, REG_INTENSITY, 0x03);    /* Medium brightness */
       WriteToChip(i, REG_SHUTDOWN, 0x01);     /* Normal operation */
     }
     Clear();
@@ -80,11 +80,9 @@ class Max7219 {
 
   /* Clear frame buffer */
   void Clear() {
-    mutex_.lock();
     for (auto& chip : framebuffer_) {
       chip.fill(0);
     }
-    mutex_.unlock();
   }
 
   /* Set individual pixel state
@@ -92,7 +90,6 @@ class Max7219 {
    * row: Vertical position (0-7)
    * col: Horizontal position (0-7) */
   void DrawPixel(size_t chip_index, uint8_t row, uint8_t col, bool on) {
-    mutex_.lock();
     if (chip_index >= N || row >= 8 || col >= 8) {
       return;
     }
@@ -101,7 +98,6 @@ class Max7219 {
     } else {
       framebuffer_[chip_index][7 - row] &= ~(1 << col);
     }
-    mutex_.unlock();
   }
 
   /* 16x32 composite matrix drawing function
@@ -159,50 +155,58 @@ class Max7219 {
     /* Draw left border */
     for (int i = 0; i < 16; ++i) {
       DrawPixelMatrix2(i, 0, true);
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     /* Draw bottom border */
     for (int i = 0; i < 16; ++i) {
       DrawPixelMatrix2(15, i, true);
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     /* Draw middle vertical line */
     for (int i = 0; i < 16; ++i) {
       DrawPixelMatrix2(i, 16, true);
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     /* Draw right border */
     for (int i = 16; i < 32; ++i) {
       DrawPixelMatrix2(15, i, true);
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     /* Draw right vertical line */
     for (int i = 15; i > 0; --i) {
       DrawPixelMatrix2(i, 31, true);
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     /* Draw top right border */
     for (int i = 31; i > 16; --i) {
       DrawPixelMatrix2(0, i, true);
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     /* Draw middle horizontal line */
     for (int i = 15; i > 0; --i) {
       DrawPixelMatrix2(i, 15, true);
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     /* Draw top left border */
     for (int i = 15; i > 0; --i) {
       DrawPixelMatrix2(0, i, true);
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
+  }
+  
+  void Lock(){
+    mutex_.lock();
+  }
+  
+  void Unlock(){
+    mutex_.unlock();
   }
 
  private:
