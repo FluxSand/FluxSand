@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <format>
 #include <fstream>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <stdexcept>
@@ -15,7 +16,6 @@
 #include "bsp_gpio.hpp"
 #include "bsp_spi.hpp"
 #include "comp_type.hpp"
-#include "message.hpp"
 
 /**
  * MPU9250 class
@@ -31,26 +31,14 @@ class Mpu9250 {
    * @param gpio_cs    Pointer to a GPIO object (chip select)
    */
   Mpu9250(SpiDevice* spi_device, Gpio* gpio_cs, Gpio* gpio_int)
-      : spi_device_(spi_device),
-        gpio_cs_(gpio_cs),
-        gpio_int_(gpio_int),
-        accel_topic_("accel", true),
-        gyro_topic_("gyro", true) {
+      : spi_device_(spi_device), gpio_cs_(gpio_cs), gpio_int_(gpio_int) {
     assert(spi_device_ && gpio_cs_ && gpio_int_);
-
-    accel_topic_ = LibXR::Topic::CreateTopic<Type::Vector3>("accel");
-    gyro_topic_ = LibXR::Topic::CreateTopic<Type::Vector3>("gyro");
 
     Initialize();
     LoadCalibrationData();
 
     /* Register interrupt callback */
-    gpio_int_->EnableInterruptRisingEdgeWithCallback([this]() {
-      ReadData();
-      accel_topic_.Publish(accel_);
-      gyro_topic_.Publish(gyro_);
-      DisplayData();
-    });
+    gpio_int_->EnableInterruptRisingEdgeWithCallback([this]() { ReadData(); });
 
     calibrate_thread_ = std::thread(&Mpu9250::CalibrateThreadTask, this);
   }
@@ -120,6 +108,18 @@ class Mpu9250 {
         std::this_thread::sleep_until(next_time);
       }
     }
+  }
+
+  /**
+   * @brief Registers a callback function to be called when new data is
+   * available.
+   *
+   * @param callback The callback function
+   */
+  void RegisterDataCallback(
+      const std::function<void(const Type::Vector3&, const Type::Vector3&)>&
+          callback) {
+    data_callback_ = callback;
   }
 
   /**
@@ -204,13 +204,13 @@ class Mpu9250 {
     uint8_t* temperature_data = &data[6];
     uint8_t* gyro_data = &data[8];
 
-    accel_.x = static_cast<float>(
+    accel_.z = -static_cast<float>(
                    static_cast<int16_t>((accel_data[0] << 8) | accel_data[1])) *
                ACCEL_SCALE;
     accel_.y = static_cast<float>(
                    static_cast<int16_t>((accel_data[2] << 8) | accel_data[3])) *
                ACCEL_SCALE;
-    accel_.z = static_cast<float>(
+    accel_.x = static_cast<float>(
                    static_cast<int16_t>((accel_data[4] << 8) | accel_data[5])) *
                ACCEL_SCALE;
 
@@ -219,15 +219,15 @@ class Mpu9250 {
                        333.87f +
                    21.0f;
 
-    float gyro_x = static_cast<float>(static_cast<int16_t>((gyro_data[0] << 8) |
-                                                           gyro_data[1])) *
+    float gyro_z = -static_cast<float>(static_cast<int16_t>(
+                       (gyro_data[0] << 8) | gyro_data[1])) *
                        GYRO_SCALE -
                    gyro_bias_.x;
     float gyro_y = static_cast<float>(static_cast<int16_t>((gyro_data[2] << 8) |
                                                            gyro_data[3])) *
                        GYRO_SCALE -
                    gyro_bias_.y;
-    float gyro_z = static_cast<float>(static_cast<int16_t>((gyro_data[4] << 8) |
+    float gyro_x = static_cast<float>(static_cast<int16_t>((gyro_data[4] << 8) |
                                                            gyro_data[5])) *
                        GYRO_SCALE -
                    gyro_bias_.z;
@@ -239,6 +239,10 @@ class Mpu9250 {
     gyro_.x = gyro_x;
     gyro_.y = gyro_y;
     gyro_.z = gyro_z;
+
+    if (data_callback_) {
+      data_callback_(accel_, gyro_);
+    }
   }
 
   /**
@@ -364,8 +368,8 @@ class Mpu9250 {
 
   float temperature_ = 0; /* Temperature data */
 
-  LibXR::Topic accel_topic_; /* Accelerometer topic */
-  LibXR::Topic gyro_topic_;  /* Gyroscope topic */
+  std::function<void(const Type::Vector3& accel, const Type::Vector3& gyro)>
+      data_callback_; /* Data callback function */
 
   std::thread calibrate_thread_; /* Thread */
 };
