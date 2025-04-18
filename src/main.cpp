@@ -10,6 +10,7 @@
 #include "bsp_pwm.hpp"
 #include "bsp_spi.hpp"
 #include "comp_ahrs.hpp"
+#include "comp_gui.hpp"
 #include "comp_inference.hpp"
 #include "fluxsand.hpp"
 #include "max7219.hpp"
@@ -19,9 +20,12 @@ int main() {
   /* Buzzer */
   PWM pwm_buzzer(0, 50, 7.5);
 
-  pwm_buzzer.PlayNote(PWM::NoteName::C, 7, 300);
-  pwm_buzzer.PlayNote(PWM::NoteName::D, 7, 300);
-  pwm_buzzer.PlayNote(PWM::NoteName::E, 7, 300);
+  pwm_buzzer.PlayNote(PWM::NoteName::C, 7, 250);
+  std::this_thread::sleep_for(std::chrono::milliseconds(300));
+  pwm_buzzer.PlayNote(PWM::NoteName::D, 7, 250);
+  std::this_thread::sleep_for(std::chrono::milliseconds(300));
+  pwm_buzzer.PlayNote(PWM::NoteName::E, 7, 250);
+  std::this_thread::sleep_for(std::chrono::milliseconds(300));
 
   pwm_buzzer.Disable();
 
@@ -57,15 +61,18 @@ int main() {
   mpu9250.RegisterDataCallback(std::bind(
       &AHRS::OnData, &ahrs, std::placeholders::_1, std::placeholders::_2));
 
-  InferenceEngine inference_engine(ONNX_MODEL_PATH, 0.05f, 0.75f, 20, 6);
+  InferenceEngine inference_engine(ONNX_MODEL_PATH, 0.01f, 0.7f, 15, 3);
   ahrs.RegisterDataCallback(std::bind(
       &InferenceEngine::OnData, &inference_engine, std::placeholders::_1,
       std::placeholders::_2, std::placeholders::_3));
 
+  CompGuiX gui(display);
+
+  gui.Clear();
+
   /* Main loop */
-  FluxSand fluxsand(&pwm_buzzer, &gpio_user_button_1, &gpio_user_button_2,
-                    &display, &bmp280, &aht20, &ads1115, &ahrs,
-                    &inference_engine);
+  FluxSand fluxsand(&pwm_buzzer, &gpio_user_button_1, &gpio_user_button_2, &gui,
+                    &bmp280, &aht20, &ads1115, &ahrs, &inference_engine);
 
   while (true) {
     fluxsand.Run();

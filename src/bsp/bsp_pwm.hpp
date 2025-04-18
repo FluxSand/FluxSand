@@ -5,30 +5,34 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <semaphore>
 #include <string>
+#include <thread>
 
 /**
  * @brief PWM driver with Beep and PlayNote functionality.
  *
- * Designed for Raspberry Pi 5, using GPIO12/13.
+ * This class controls PWM output on Raspberry Pi 5 using GPIO12 (channel 0) and
+ * GPIO13 (channel 1).
  *
  * ⚠️ Requires enabling the following overlay in `/boot/firmware/config.txt`:
  *     dtoverlay=pwm-2chan
- *
- * GPIO12 = PWM channel 0, GPIO13 = PWM channel 1.
  */
 class PWM {
  public:
-  // Musical note names used in PlayNote().
+  /**
+   * @brief Musical note names used for MIDI note calculation.
+   */
   // NOLINTNEXTLINE
   enum class NoteName { C = 0, Cs, D, Ds, E, F, Fs, G, Gs, A, As, B };
 
   /**
-   * @brief Constructor: initialize PWM channel and set default frequency/duty.
+   * @brief Constructor: initializes PWM channel, sets initial frequency and
+   * duty cycle.
    * @param channel PWM channel number (0 or 1).
-   * @param frequency_hz Initial frequency in Hz (default: 1000).
-   * @param duty_percent Initial duty cycle as a percentage (0.0 to 1.0).
-   * @param chip PWM chip number (default: 2 for RPi 5).
+   * @param frequency_hz Initial frequency in Hz. Default is 1000 Hz.
+   * @param duty_percent Initial duty cycle (range: 0.0 ~ 1.0).
+   * @param chip PWM chip number. Default is 2 for Raspberry Pi 5.
    */
   PWM(int channel, int frequency_hz = 1000, float duty_percent = 0.0f,
       int chip = 2)
@@ -36,29 +40,39 @@ class PWM {
     chip_path_ = "/sys/class/pwm/pwmchip" + std::to_string(chip);
     pwm_path_ = chip_path_ + "/pwm" + std::to_string(channel);
 
-    // Export the PWM channel if not already exported.
-    // 如果 pwm 通道未导出，则执行导出。
+    // Export the PWM channel if it has not been exported yet.
     if (access(pwm_path_.c_str(), F_OK) != 0) {
       FILE* fp = fopen((chip_path_ + "/export").c_str(), "w");
       if (fp) {
-        (void)(fprintf(fp, "%d", channel));  // 导出通道
+        (void)(fprintf(fp, "%d", channel));
         (void)(fclose(fp));
-        usleep(100000);  // Wait for sysfs to initialize.
+        usleep(100000);  // Allow sysfs to initialize.
       }
     }
 
     WriteSysfs(pwm_path_ + "/period", period_ns_);
     SetDutyCycle(duty_percent);
     Enable();
+
+    // Launch background thread to play notes asynchronously.
+    note_thread_ = std::thread([this]() {
+      while (true) {
+        note_sem_.acquire();
+        float midi = static_cast<float>(note_) +
+                     (static_cast<float>(octave_) + 1.0f) * 12.0f;
+        float freq = 440.0f * std::pow(2.0f, (midi - 69.0f) / 12.0f);
+        Beep(static_cast<uint32_t>(freq), duration_ms_);
+      }
+    });
   }
 
   /**
-   * @brief Destructor: disable PWM output.
+   * @brief Destructor: disables PWM output.
    */
   ~PWM() { Disable(); }
 
   /**
-   * @brief Set PWM output frequency.
+   * @brief Set the output frequency of PWM.
    * @param hz Desired frequency in Hz.
    */
   void SetFrequency(uint32_t hz) {
@@ -67,8 +81,8 @@ class PWM {
   }
 
   /**
-   * @brief Set PWM duty cycle.
-   * @param percent Duty cycle (0.0 ~ 1.0).
+   * @brief Set the duty cycle of PWM output.
+   * @param percent Duty cycle as a float between 0.0 and 1.0.
    */
   void SetDutyCycle(float percent) {
     int duty_ns = static_cast<int>(percent * static_cast<float>(period_ns_));
@@ -76,46 +90,46 @@ class PWM {
   }
 
   /**
-   * @brief Enable PWM output.
+   * @brief Enable the PWM output signal.
    */
   void Enable() { WriteSysfs(pwm_path_ + "/enable", 1); }
 
   /**
-   * @brief Disable PWM output.
+   * @brief Disable the PWM output signal.
    */
   void Disable() { WriteSysfs(pwm_path_ + "/enable", 0); }
 
   /**
-   * @brief Output a simple beep sound.
+   * @brief Output a beep with specific frequency and duration.
    * @param freq Frequency in Hz.
    * @param duration_ms Duration in milliseconds.
    */
   void Beep(uint32_t freq, uint32_t duration_ms) {
     SetFrequency(freq);
-    SetDutyCycle(0.5);
+    SetDutyCycle(0.5f);
     Enable();
-    usleep(duration_ms * 1000);  // Delay in microseconds.
+    usleep(duration_ms * 1000);
     Disable();
   }
 
   /**
-   * @brief Play a musical note using MIDI pitch calculation.
-   * @param note Note name (C, D, E, etc.).
+   * @brief Play a musical note based on note name and octave.
+   * @param note Note (C, D, E, etc.).
    * @param octave Octave number (e.g., 4 for A4 = 440 Hz).
-   * @param duration_ms Duration in milliseconds.
+   * @param duration_ms Duration of the note in milliseconds.
    */
   void PlayNote(NoteName note, uint32_t octave, uint32_t duration_ms) {
-    float midi =
-        static_cast<float>(note) + (static_cast<float>(octave) + 1.0f) * 12.0f;
-    float freq = 440.0f * std::pow(2.0f, (midi - 69) / 12.0f);
-    Beep(static_cast<uint32_t>(freq), duration_ms);
+    note_ = note;
+    octave_ = octave;
+    duration_ms_ = duration_ms;
+    note_sem_.release();
   }
 
   /**
-   * @brief Configure alarm tone settings.
+   * @brief Set configuration parameters for alarm beep.
    * @param freq Alarm frequency in Hz.
-   * @param duration_ms Tone duration in milliseconds.
-   * @param delay_ms Delay after tone in milliseconds.
+   * @param duration_ms Duration of tone in milliseconds.
+   * @param delay_ms Delay after the tone in milliseconds.
    */
   void SetAlarmConfig(uint32_t freq, uint32_t duration_ms, uint32_t delay_ms) {
     alarm_freq_ = freq;
@@ -124,7 +138,7 @@ class PWM {
   }
 
   /**
-   * @brief Trigger alarm sound with delay.
+   * @brief Trigger an alarm sound followed by a delay.
    */
   void TriggerAlarm() {
     Beep(alarm_freq_, alarm_duration_);
@@ -132,20 +146,26 @@ class PWM {
   }
 
  private:
-  std::string chip_path_;  // PWM chip sysfs path
-  std::string pwm_path_;   // PWM channel sysfs path
-  int period_ns_;          // PWM period in nanoseconds
-  int channel_;            // PWM channel number
+  std::string chip_path_;  ///< Sysfs path to the PWM chip
+  std::string pwm_path_;   ///< Sysfs path to the PWM channel
+  int period_ns_;          ///< PWM period in nanoseconds
+  int channel_;            ///< PWM channel number
 
-  uint32_t alarm_freq_ = 1500;     // Default alarm frequency
-  uint32_t alarm_duration_ = 300;  // Default alarm duration
-  uint32_t alarm_delay_ = 300;     // Default delay after alarm
+  uint32_t alarm_freq_ = 1500;     ///< Default alarm frequency in Hz
+  uint32_t alarm_duration_ = 300;  ///< Default alarm duration in ms
+  uint32_t alarm_delay_ = 300;     ///< Default alarm delay in ms
+
+  std::thread note_thread_;            ///< Background thread for playing notes
+  NoteName note_;                      ///< Current note name
+  uint32_t octave_;                    ///< Current octave
+  uint32_t duration_ms_;               ///< Duration of note in ms
+  std::binary_semaphore note_sem_{0};  ///< Semaphore to trigger note play
 
   /**
-   * @brief Write integer value to sysfs file.
-   * @param path Path to sysfs file.
-   * @param value Value to write.
-   * @return Write result or -1 on failure.
+   * @brief Write an integer value to a sysfs file.
+   * @param path Full path to the sysfs file.
+   * @param value Integer value to write.
+   * @return Write result (number of characters written) or -1 on error.
    */
   int WriteSysfs(const std::string& path, int value) const {
     FILE* fp = fopen(path.c_str(), "w");
