@@ -104,6 +104,8 @@ class CompGuiX {
   }
 
  public:
+  void SetLight(uint8_t light) { display_.SetIntensity(light); }
+
   void RenderTimeLandscape(uint8_t hour, uint8_t minute) {
     display_.Lock();
     Clear();
@@ -142,6 +144,76 @@ class CompGuiX {
 
     Draw(RegionID::SCREEN_0_PORTRAIT, minute);
     Draw(RegionID::SCREEN_1_PORTRAIT, hour);
+    display_.Unlock();
+  }
+
+  void RenderHumidity(uint8_t humidity) {
+    static constexpr bool ICON[16][16] = {
+        {0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0},
+        {0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+        {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+        {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+        {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+        {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    };
+    display_.Lock();
+    Clear();
+    SetOrientation(Orientation::Portrait);
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < 2; j++) {
+        for (int k = 0; k < 8; k++) {
+          for (int l = 0; l < 8; l++) {
+            display_.DrawPixel(i * 2 + j + 4, k, l, ICON[k + i * 8][l + j * 8]);
+          }
+        }
+      }
+    }
+    Draw(RegionID::SCREEN_0_PORTRAIT, humidity);
+    display_.Unlock();
+  }
+
+  void RenderTemperature(uint8_t temperature) {
+    static constexpr bool ICON[16][16] = {
+        {0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0},
+        {1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0},
+        {1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0},
+        {1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0},
+        {0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0},
+        {0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0},
+        {0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0},
+        {0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0},
+        {0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0},
+        {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0},
+        {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    };
+    display_.Lock();
+    Clear();
+    SetOrientation(Orientation::Portrait);
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < 2; j++) {
+        for (int k = 0; k < 8; k++) {
+          for (int l = 0; l < 8; l++) {
+            display_.DrawPixel(i * 2 + j + 4, k, l, ICON[k + i * 8][l + j * 8]);
+          }
+        }
+      }
+    }
+    Draw(RegionID::SCREEN_0_PORTRAIT, temperature);
     display_.Unlock();
   }
 };

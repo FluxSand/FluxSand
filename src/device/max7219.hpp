@@ -72,10 +72,12 @@ class Max7219 {
 
   /* Set global brightness (0-15) */
   void SetIntensity(uint8_t value) {
+    mutex_.lock();
     if (value > 0x0F) {
       value = 0x0F;
     }
     WriteAll(REG_INTENSITY, value);
+    mutex_.unlock();
   }
 
   /* Clear frame buffer */
@@ -208,6 +210,10 @@ class Max7219 {
   void Unlock(){
     mutex_.unlock();
   }
+  
+  void SetLight(uint8_t light){
+    SetIntensity(light);
+  }
 
  private:
   // NOLINTNEXTLINE
@@ -216,7 +222,7 @@ class Max7219 {
   std::array<std::array<uint8_t, 8>, N> framebuffer_;
   std::thread thread_; /* Thread */
   std::mutex mutex_;
-
+  
   /* Write to all chips with same register */
   void WriteAll(uint8_t addr, uint8_t value) {
     std::array<uint8_t, N> data;
