@@ -117,6 +117,19 @@ class CompGuiX {
     display_.Unlock();
   }
 
+  void RenderTimeLandscapeMS(uint8_t minutes, uint8_t seconds) {
+    display_.Lock();
+    Clear();
+    SetOrientation(Orientation::Landscape);
+    if (seconds % 2 == 1) {
+      display_.DrawPixel(3, 7, 4, true);  // Colon dot
+      display_.DrawPixel(3, 4, 7, true);  // Colon dot
+    }
+    Draw(RegionID::SCREEN_0_LANDSCAPE, minutes);
+    Draw(RegionID::SCREEN_1_LANDSCAPE, seconds);
+    display_.Unlock();
+  }
+
   void RenderTimePortrait(uint8_t hour, uint8_t minute) {
     display_.Lock();
     Clear();
@@ -144,6 +157,38 @@ class CompGuiX {
 
     Draw(RegionID::SCREEN_0_PORTRAIT, minute);
     Draw(RegionID::SCREEN_1_PORTRAIT, hour);
+    display_.Unlock();
+  }
+
+  void RenderTimePortraitMS(uint8_t minutes, uint8_t seconds) {
+    display_.Lock();
+    Clear();
+    SetOrientation(Orientation::Portrait);
+
+    // Colon dots - right
+    if (seconds % 2 == 1) {
+      display_.DrawPixel(4, 4, 0, true);
+      display_.DrawPixel(4, 4, 1, true);
+      display_.DrawPixel(4, 4, 2, true);
+      display_.DrawPixel(4, 3, 2, true);
+      display_.DrawPixel(4, 2, 2, true);
+      display_.DrawPixel(4, 2, 3, true);
+      display_.DrawPixel(4, 2, 4, true);
+      display_.DrawPixel(4, 1, 4, true);
+      display_.DrawPixel(4, 0, 4, true);
+    }
+
+    // Colon dots - left
+    if (seconds % 2 != 1) {
+      display_.DrawPixel(0, 0, 0, true);
+      display_.DrawPixel(0, 1, 0, true);
+      display_.DrawPixel(0, 1, 1, true);
+      display_.DrawPixel(0, 1, 2, true);
+      display_.DrawPixel(0, 2, 2, true);
+    }
+
+    Draw(RegionID::SCREEN_0_PORTRAIT, seconds);
+    Draw(RegionID::SCREEN_1_PORTRAIT, minutes);
     display_.Unlock();
   }
 
