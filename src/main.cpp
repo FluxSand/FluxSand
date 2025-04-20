@@ -61,7 +61,7 @@ int main() {
   mpu9250.RegisterDataCallback(std::bind(
       &AHRS::OnData, &ahrs, std::placeholders::_1, std::placeholders::_2));
 
-  InferenceEngine inference_engine(ONNX_MODEL_PATH, 0.01f, 0.7f, 15, 3);
+  InferenceEngine inference_engine(ONNX_MODEL_PATH, 0.1f, 0.65f, 6, 3);
   ahrs.RegisterDataCallback(std::bind(
       &InferenceEngine::OnData, &inference_engine, std::placeholders::_1,
       std::placeholders::_2, std::placeholders::_3));
