@@ -1,6 +1,5 @@
 [Unit]
 Description=FluxSand Application
-After=network.target
 
 [Service]
 Type=simple
@@ -12,6 +11,8 @@ WorkingDirectory=/usr/local/bin
 StandardOutput=journal
 StandardError=journal
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+TimeoutStopSec=1
+KillSignal=SIGKILL
 
 [Install]
 WantedBy=multi-user.target
