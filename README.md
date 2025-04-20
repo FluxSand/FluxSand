@@ -74,14 +74,16 @@ TODO: Add detailed code organization once development is complete.
 
 ---
 
+
 ## 👉 Division of responsibilities among team members
 
-- **Cong Liu (3055752L)**: [e.g.A]
-- **Xinkai Li (3030890L)**: [e.g. B]
-- **Jiahe Chen (3049643C)**: [e.g. C]
-- **Haoming Wang (2987352W)**: [e.g. D]
-- **Lianxiao Yao (3048246Y)**: [e.g.E]
-- **Yinjie Fan (3062833F)**: [e.g. F]
+- **Cong Liu (3055752L)**: Designed and implemented AHRS, systemd service integration, LED smoothing, and overall architecture control.
+- **Xinkai Li (3030890L)**: Integrated ADS1115 module; refactored and cleaned up third-party dependencies.
+- **Jiahe Chen (3049643C)**: Refined sensor fusion algorithms, improved inference runtime behavior, and optimized visual output handling.
+- **Haoming Wang (2987352W)**: Developed drivers for I2C peripherals including AHT20, BMP280, MAX7219; contributed to device interfacing.
+- **Lianxiao Yao (3048246Y)**: Developed GUI logic including countdown display, implemented motion-based flow behavior and fixed direction control.
+- **Yinjie Fan (3062833F)**: Implemented GUI components, humidity/temperature rendering, and contributed to LED matrix port control.
+
 
 ---
 
