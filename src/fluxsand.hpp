@@ -274,7 +274,7 @@ class FluxSand {
     MODE_NUM
   };
 
-  Mode mode_ = Mode::TEMPERATURE;
+  Mode mode_ = Mode::TIME;
 
   bool landscape_ = false;
 
