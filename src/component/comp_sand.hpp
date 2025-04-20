@@ -49,74 +49,98 @@ class SandGrid {
   }
 
   void StepOnce(float gravity_deg) {
+    // Rotate gravity by 225 degrees to align with visual direction
     gravity_deg += 225.0f;
     if (gravity_deg >= 360.0f) gravity_deg -= 360.0f;
 
+    // Convert gravity direction to unit vector (gx, gy)
     float angle_rad = gravity_deg * PI / 180.0f;
     float gx = std::cos(angle_rad);
     float gy = std::sin(angle_rad);
 
+    // Define all 8 possible neighboring directions
     static const std::vector<std::pair<int, int>> directions = {
         {-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1},
     };
 
-    std::uniform_real_distribution<float> noise_dist(-20.0f, 20.0f);
+    // Random angle noise for more natural flow
+    std::uniform_real_distribution<float> noise_dist(-30.0f, 30.0f);
 
-    // 本帧将要移动的沙子列表
+    // List of sand moves to perform this frame: (from_row, from_col, to_row,
+    // to_col)
     std::vector<std::tuple<int, int, int, int>> moves;
 
-    // 标记某个格子是否已作为目标点被占用，避免多个粒子冲进同一位置导致覆盖
+    // Tracks which cells are already targeted to avoid collision
     std::array<std::array<bool, SIZE>, SIZE> occupied_next = {};
 
+    // ==== Custom row-wise center-outward traversal (bottom-up) ====
+    std::vector<std::pair<int, int>> traversal_order;
     for (int r = SIZE - 1; r >= 0; --r) {
-      for (int c = 0; c < SIZE; ++c) {
-        if (!grid[r][c]) continue;
+      int center = SIZE / 2;
+      traversal_order.emplace_back(r, center);
+      for (int offset = 1; offset < SIZE; ++offset) {
+        int left = center - offset;
+        int right = center + offset;
+        if (left >= 0) traversal_order.emplace_back(r, left);
+        if (right < SIZE) traversal_order.emplace_back(r, right);
+      }
+    }
 
-        float noise_deg = noise_dist(rng_);
-        float cos_threshold = std::cos((55.0f + noise_deg) * PI / 180.0f);
+    // ==== Traverse and decide moves ====
+    for (auto [r, c] : traversal_order) {
+      if (!grid[r][c]) continue;  // Skip if no sand
 
-        std::pair<int, int> best_move = {0, 0};
-        float best_dot = -2.0f;
+      float noise_deg = noise_dist(rng_);
+      float cos_threshold = std::cos((55.0f + noise_deg) * PI / 180.0f);
 
-        for (auto [dr, dc] : directions) {
-          int nr = r + dr;
-          int nc = c + dc;
-          if (!InBounds(nr, nc) || grid[nr][nc]) continue;
+      std::pair<int, int> best_move = {0, 0};
+      float best_dot = -2.0f;
 
-          float vx = static_cast<float>(dc);
-          float vy = static_cast<float>(dr);
-          float len = std::sqrt(vx * vx + vy * vy);
-          if (len == 0.0f) continue;
+      // Try all directions to find the best move
+      for (auto [dr, dc] : directions) {
+        int nr = r + dr;
+        int nc = c + dc;
+        if (!InBounds(nr, nc) || grid[nr][nc])
+          continue;  // Skip if out of bounds or not empty
 
-          vx /= len;
-          vy /= len;
-          float dot = vx * gx + vy * gy;
+        float vx = static_cast<float>(dc);
+        float vy = static_cast<float>(dr);
+        float len = std::sqrt(vx * vx + vy * vy);
+        if (len == 0.0f) continue;
 
-          if (dot > cos_threshold && dot > best_dot) {
-            best_dot = dot;
-            best_move = {dr, dc};
-          }
+        vx /= len;
+        vy /= len;
+
+        // Dot product with gravity vector
+        float dot = vx * gx + vy * gy;
+
+        // Select move if direction is closer to gravity and exceeds threshold
+        if (dot > cos_threshold && dot > best_dot) {
+          best_dot = dot;
+          best_move = {dr, dc};
         }
+      }
 
-        if (best_dot > -1.0f) {
-          int nr = r + best_move.first;
-          int nc = c + best_move.second;
+      // Queue the move if a good direction was found and not already taken
+      if (best_dot > -1.0f) {
+        int nr = r + best_move.first;
+        int nc = c + best_move.second;
 
-          // 避免多个粒子抢同一个目标格子
-          if (!occupied_next[nr][nc]) {
-            occupied_next[nr][nc] = true;
-            moves.emplace_back(r, c, nr, nc);
-          }
-          // 否则跳过，不移动
+        if (!occupied_next[nr][nc]) {
+          occupied_next[nr][nc] = true;
+          moves.emplace_back(r, c, nr, nc);
         }
       }
     }
 
-    // 执行所有移动操作
+    // ==== Perform all queued moves ====
     for (auto [r, c, nr, nc] : moves) {
       grid[r][c] = false;
       grid[nr][nc] = true;
     }
+
+    // Optional: Debug output
+    // std::cout << "[StepOnce] Moved " << moves.size() << " sand particles\n";
   }
 
   void Clear() {

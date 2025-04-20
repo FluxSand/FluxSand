@@ -104,7 +104,7 @@ class FluxSand {
     inference->RegisterDataCallback([this](ModelOutput result) {
       inference_result_ = result;
       std::cout << "New Gesture: " << LABELS.find(result)->second << '\n';
-      pwm_buzzer_->PlayNote(PWM::NoteName::C, 7, 50);
+      pwm_buzzer_->PlayNote(PWM::NoteName::C, 7, 300);
       switch (result) {
         case ModelOutput::TILT_RIGHT:
           if (mode_ == Mode::TIMER && timer_duration_sec_ < 60 * 99 - 1) {
@@ -201,6 +201,7 @@ class FluxSand {
             remaining = 0;
             timer_active_ = false;
             pwm_buzzer_->PlayNote(PWM::NoteName::C, 8, 1000);
+            gui_->SandDisable();
             std::cout << "Timer finished\n";
           } else {
             remaining -= elapsed;
