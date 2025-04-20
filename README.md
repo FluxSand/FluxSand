@@ -64,6 +64,7 @@
 
 ---
 
+
 ## **💻 Software Architecture**
 
 This project is developed primarily in **C++**, running on a **Linux + Raspberry Pi** platform, utilizing an **event-driven real-time architecture** to ensure seamless interactions.
@@ -95,3 +96,65 @@ TODO: Add detailed code organization once development is complete.
 🔹 [**Madgwick's filter**](https://github.com/xioTechnologies/Open-Source-AHRS-With-x-IMU): Madgwick algorithm for orientation estimation.
 
 🔹 [**XRobot**](https://github.com/xrobot-org/XRobot): An embedded software framework for MCU, Arm/x86 Linux and simulator.
+
+
+## **🛠️ Compile & Installation**
+
+To compile FluxSand from source and register it as a systemd service, follow the steps below:
+
+### 🧪 Step 1: Build the Project
+
+```bash
+mkdir build
+cd build
+export CC=clang
+export CXX=clang++
+cmake -DCMAKE_BUILD_TYPE=Release ..
+make
+```
+
+You can also use multi-core compilation for better performance:
+
+```bash
+make -j$(nproc)
+```
+
+### 🛰 Step 2: Register as a systemd Service
+
+Create a new systemd unit file `/etc/systemd/system/fluxsand.service` and paste the following content:
+
+```ini
+[Unit]
+Description=FluxSand Digital Hourglass Service
+After=network.target
+
+[Service]
+ExecStart=/home/YOUR_USERNAME/repository/FluxSand/build/FluxSand
+WorkingDirectory=/home/YOUR_USERNAME/repository/FluxSand/build/
+Restart=always
+RestartSec=5
+User=YOUR_USERNAME
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Replace `YOUR_USERNAME` with your actual Linux username.
+
+Then reload systemd and enable the service:
+
+```bash
+sudo systemctl daemon-reexec
+sudo systemctl daemon-reload
+sudo systemctl enable fluxsand.service
+sudo systemctl start fluxsand.service
+```
+
+You can check the service status or view logs using:
+
+```bash
+systemctl status fluxsand.service
+journalctl -u fluxsand.service -f
+```

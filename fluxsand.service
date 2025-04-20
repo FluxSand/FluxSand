@@ -1,0 +1,15 @@
+[Unit]
+Description=FluxSand Digital Hourglass
+After=network.target
+
+[Service]
+ExecStart=/home/XRobot/repository/FluxSand/build/FluxSand
+WorkingDirectory=/home/XRobot/repository/FluxSand/build/
+Restart=always
+RestartSec=5
+User=XRobot
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
