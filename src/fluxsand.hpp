@@ -83,7 +83,7 @@ class FluxSand {
 
       static std::deque<float> light_queue;
       light_queue.push_front(lux);
-      if (light_queue.size() > 250) {
+      if (light_queue.size() > 50) {
         auto avg = 0.0f;
         for (auto l : light_queue) {
           avg += l;
@@ -91,7 +91,7 @@ class FluxSand {
         avg /= static_cast<float>(light_queue.size());
         light_ = avg;
         static int counter = 0;
-        if (counter > 20) {
+        if (counter > 5) {
           gui_->SetLight(static_cast<uint8_t>(light_ / 20 + 1));
           counter = 0;
         } else {
