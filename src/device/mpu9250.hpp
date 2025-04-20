@@ -204,10 +204,10 @@ class Mpu9250 {
     uint8_t* temperature_data = &data[6];
     uint8_t* gyro_data = &data[8];
 
-    accel_.z = -static_cast<float>(
+    accel_.z = static_cast<float>(
                    static_cast<int16_t>((accel_data[0] << 8) | accel_data[1])) *
                ACCEL_SCALE;
-    accel_.y = static_cast<float>(
+    accel_.y = -static_cast<float>(
                    static_cast<int16_t>((accel_data[2] << 8) | accel_data[3])) *
                ACCEL_SCALE;
     accel_.x = static_cast<float>(
@@ -219,18 +219,18 @@ class Mpu9250 {
                        333.87f +
                    21.0f;
 
-    float gyro_z = -static_cast<float>(static_cast<int16_t>(
-                       (gyro_data[0] << 8) | gyro_data[1])) *
+    float gyro_z = static_cast<float>(static_cast<int16_t>((gyro_data[0] << 8) |
+                                                           gyro_data[1])) *
                        GYRO_SCALE -
-                   gyro_bias_.x;
-    float gyro_y = static_cast<float>(static_cast<int16_t>((gyro_data[2] << 8) |
-                                                           gyro_data[3])) *
+                   gyro_bias_.z;
+    float gyro_y = -static_cast<float>(static_cast<int16_t>(
+                       (gyro_data[2] << 8) | gyro_data[3])) *
                        GYRO_SCALE -
                    gyro_bias_.y;
     float gyro_x = static_cast<float>(static_cast<int16_t>((gyro_data[4] << 8) |
                                                            gyro_data[5])) *
                        GYRO_SCALE -
-                   gyro_bias_.z;
+                   gyro_bias_.x;
 
     gyro_delta_.x = gyro_x - gyro_.x;
     gyro_delta_.y = gyro_y - gyro_.y;

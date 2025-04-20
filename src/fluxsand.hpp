@@ -27,6 +27,7 @@ class FluxSand {
         inference_(inference),
         gpio_int_sem_1_(0),
         gpio_int_sem_2_(0) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(6000));
     /* Reset buzzer */
     pwm_buzzer->SetDutyCycle(0.0f);
     pwm_buzzer->Enable();
@@ -36,6 +37,7 @@ class FluxSand {
       gpio_int_sem_1_.release();
       mode_ = static_cast<Mode>((static_cast<int>(mode_) + 1) %
                                 static_cast<int>(Mode::MODE_NUM));
+      gui_->SandDisable();
       std::cout << "Button 1\n";
       pwm_buzzer_->PlayNote(PWM::NoteName::C, 7, 50);
     });
@@ -54,6 +56,7 @@ class FluxSand {
       } else if (mode_ == Mode::TIMER) {
         if (timer_active_) {
           StopTimer();
+          gui_->SandDisable();
         }
       }
     });
@@ -108,25 +111,28 @@ class FluxSand {
             if (!timer_active_) {
               timer_duration_sec_ += 300;
             }
-          } else if (mode_ == Mode::TIME && landscape_) {
-            landscape_ = false;
-          }
-
-          if (mode_ == Mode::TIMER && timer_active_ && landscape_) {
-            landscape_ = false;
-          }
-          break;
-        case ModelOutput::TILT_LEFT:
-          if (mode_ == Mode::TIMER && timer_duration_sec_ > 300) {
-            if (!timer_active_) {
-              timer_duration_sec_ -= 300;
-            }
           } else if (mode_ == Mode::TIME && !landscape_) {
             landscape_ = true;
           }
 
           if (mode_ == Mode::TIMER && timer_active_ && !landscape_) {
             landscape_ = true;
+            gui_->SandDisable();
+          }
+
+          break;
+        case ModelOutput::TILT_LEFT:
+          if (mode_ == Mode::TIMER && timer_duration_sec_ > 300) {
+            if (!timer_active_) {
+              timer_duration_sec_ -= 300;
+            }
+          } else if (mode_ == Mode::TIME && landscape_) {
+            landscape_ = false;
+          }
+
+          if (mode_ == Mode::TIMER && timer_active_ && landscape_) {
+            landscape_ = false;
+            gui_->SandEnable();
           }
           break;
         case ModelOutput::SHAKE_FORWARD:
@@ -139,6 +145,7 @@ class FluxSand {
         case ModelOutput::SHAKE_BACKWARD:
           if (mode_ == Mode::TIMER) {
             StopTimer();
+            gui_->SandDisable();
           }
           break;
         default:
@@ -153,6 +160,7 @@ class FluxSand {
     std::tm* local_time = std::localtime(&t);
     int hour = local_time->tm_hour;
     int minute = local_time->tm_min;
+    gui_->SetGravityDegree(ahrs_->eulr_.rol);
 
     switch (mode_) {
       case Mode::TIME:
@@ -166,7 +174,7 @@ class FluxSand {
         gui_->RenderHumidity(static_cast<uint8_t>(aht20_->GetHumidity()));
         break;
       case Mode::TEMPERATURE:
-        gui_->RenderTemperature(static_cast<uint8_t>(temperature_));
+        gui_->RenderTemperature(static_cast<uint8_t>(aht20_->GetTemperature()));
         break;
       case Mode::STOPWATCH: {
         if (stopwatch_elapsed_sec_ >= 100 * 60 - 1) {
@@ -200,6 +208,16 @@ class FluxSand {
         }
         if (landscape_) {
           gui_->RenderTimeLandscapeMS(remaining / 60, remaining % 60);
+        } else if (timer_active_) {
+          gui_->SandEnable();
+          int target_grid_down_count =
+              128 - static_cast<int>(128.0f * static_cast<float>(remaining) /
+                                     static_cast<float>(max_duration_sec_));
+          target_grid_down_count = std::clamp(target_grid_down_count, 0, 128);
+          if (target_grid_down_count > gui_->grid_down_.Count()) {
+            SandGrid::MoveSand(&gui_->grid_up_, &gui_->grid_down_,
+                               gui_->gravity_deg_);
+          }
         } else {
           gui_->RenderTimePortraitMS(remaining / 60, remaining % 60);
         }
@@ -232,14 +250,17 @@ class FluxSand {
 
   void StartTimer(int duration_sec) {
     timer_duration_sec_ = duration_sec;
+    max_duration_sec_ = duration_sec;
     timer_start_time_ = std::chrono::steady_clock::now();
     timer_active_ = true;
     mode_ = Mode::TIMER;
+    gui_->Reset();
     std::cout << "Timer started for " << duration_sec << " seconds\n";
   }
 
   void StopTimer() {
     timer_active_ = false;
+    timer_duration_sec_ = 0;
     std::cout << "Timer stopped\n";
   }
 
@@ -252,7 +273,7 @@ class FluxSand {
     MODE_NUM
   };
 
-  Mode mode_ = Mode::TIMER;
+  Mode mode_ = Mode::TEMPERATURE;
 
   bool landscape_ = false;
 
@@ -272,6 +293,7 @@ class FluxSand {
 
   std::chrono::steady_clock::time_point timer_start_time_;
   int timer_duration_sec_ = 0;
+  int max_duration_sec_ = 0;
   bool timer_active_ = false;
 
   bool stopwatch_running_ = false;
