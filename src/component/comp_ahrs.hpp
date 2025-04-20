@@ -111,7 +111,7 @@ class AHRS {
       float beta_imu = 0;
 
       if (now_.count() - start_.count() > 1000000) {
-        beta_imu = 0.07f;
+        beta_imu = 2.0f;
       } else {
         beta_imu = 10.0f;
       }
