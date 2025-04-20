@@ -35,7 +35,7 @@ class Bmp280 {
   Bmp280(I2cDevice& i2c) : i2c_(i2c) {
     uint8_t id = i2c_.ReadRegister(REG_ID);
     if (id != 0x58) {  // Verify chip ID
-      throw std::runtime_error("Invalid BMP280 ID: 0x" + std::to_string(id));
+      std::perror("Invalid BMP280 ID");
     }
 
     ReadCalibration();

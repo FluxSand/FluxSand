@@ -32,7 +32,7 @@ class Max7219 {
   /* Constructor: Initialize SPI and CS (Chip Select) pin */
   Max7219(SpiDevice& spi, Gpio* cs) : spi_(spi), cs_(cs) {
     if (!cs_) {
-      throw std::runtime_error("CS GPIO is not initialized");
+      std::perror("CS GPIO is not initialized");
     }
     cs_->Write(1); /* CS active low, initialize to high */
     for (auto& chip : framebuffer_) {
@@ -260,7 +260,7 @@ class Max7219 {
 
     if (ioctl(spi_.Fd(), SPI_IOC_MESSAGE(1), &transfer) < 0) {
       cs_->Write(1);
-      throw std::runtime_error("SPI transfer failed");
+      std::perror("SPI transfer failed");
     }
 
     usleep(100);

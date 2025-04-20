@@ -231,7 +231,7 @@ class InferenceEngine {
   ModelOutput RunInference(std::vector<float>& input_data) {
     /* Validate output tensor dimensions */
     if (output_shape_.size() < 2 || output_shape_[1] <= 0) {
-      throw std::runtime_error("Invalid model output dimensions");
+      std::perror("Invalid model output dimensions");
     }
 
     /* Prepare input tensor */

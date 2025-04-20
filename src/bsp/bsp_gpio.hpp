@@ -36,22 +36,20 @@ class Gpio {
     assert(!chip_name.empty()); /* Ensure chip name is valid */
 
     if (!chip_) {
-      throw std::runtime_error("Failed to open GPIO chip: " + chip_name);
+      std::perror("Failed to open GPIO chip");
     }
 
     line_ = gpiod_chip_get_line(chip_, line_num_);
     if (!line_) {
       gpiod_chip_close(chip_);
-      throw std::runtime_error("Failed to get GPIO line: " +
-                               std::to_string(line_num_));
+      std::perror("Failed to get GPIO line");
     }
 
     int ret = is_output_
                   ? gpiod_line_request_output(line_, nullptr, default_value)
                   : gpiod_line_request_input(line_, nullptr);
     if (ret < 0) {
-      throw std::runtime_error("Failed to configure GPIO line: " +
-                               std::to_string(line_num_));
+      std::perror("Failed to configure GPIO line");
     }
   }
 
@@ -84,7 +82,7 @@ class Gpio {
   void Write(int value) {
     assert(is_output_);
     if (gpiod_line_set_value(line_, value) < 0) {
-      throw std::runtime_error("GPIO write failed");
+      std::perror("GPIO write failed");
     }
   }
 
@@ -96,7 +94,7 @@ class Gpio {
   int Read() const {
     int value = gpiod_line_get_value(line_);
     if (value < 0) {
-      throw std::runtime_error("GPIO read failed");
+      std::perror("GPIO read failed");
     }
     return value;
   }
@@ -110,7 +108,7 @@ class Gpio {
    */
   void EnableInterruptRisingEdgeWithCallback(Callback cb) {
     if (is_output_) {
-      throw std::runtime_error("Cannot register interrupt on output GPIO");
+      std::perror("Cannot register interrupt on output GPIO");
     }
 
     /* If line is already in use, release it */
@@ -120,7 +118,7 @@ class Gpio {
 
     /* Request GPIO line for interrupt events */
     if (gpiod_line_request_rising_edge_events(line_, nullptr) < 0) {
-      throw std::runtime_error("Failed to enable rising edge interrupt");
+      std::perror("Failed to enable rising edge interrupt");
     }
 
     callback_ = std::move(cb);
