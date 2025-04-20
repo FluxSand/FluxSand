@@ -368,7 +368,7 @@ class CompGuiX {
         for (int k = 0; k < 8; k++) {
           for (int l = 0; l < 8; l++) {
             display_.DrawPixel(i * 2 + j + 4, k, l,
-                               up->grid[k + i * 8][l + j * 8]);
+                               up->GetGrid()[k + i * 8][l + j * 8]);
           }
         }
       }
@@ -379,7 +379,7 @@ class CompGuiX {
         for (int k = 0; k < 8; k++) {
           for (int l = 0; l < 8; l++) {
             display_.DrawPixel(i * 2 + j, k, l,
-                               down->grid[k + i * 8][l + j * 8]);
+                               down->GetGrid()[k + i * 8][l + j * 8]);
           }
         }
       }

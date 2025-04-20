@@ -77,6 +77,7 @@ target_include_directories(${PROJECT_NAME}
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/bsp
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/device
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/component
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/controller
 )
 
 # ---------------------------------------------------------------------------------------
