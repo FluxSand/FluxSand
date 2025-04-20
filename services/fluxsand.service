@@ -1,7 +1,10 @@
 [Unit]
 Description=FluxSand Application
+After=basic.target
+Before=network.target
 
 [Service]
+DefaultDependencies=no
 Type=simple
 ExecStart=/usr/local/bin/FluxSand
 Restart=on-failure
