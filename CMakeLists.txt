@@ -11,7 +11,7 @@ endif()
 
 # ---------------------------------------------------------------------------------------
 # ONNX Model Path
-add_compile_definitions(ONNX_MODEL_PATH="${CMAKE_CURRENT_SOURCE_DIR}/model/model.onnx")
+add_compile_definitions(ONNX_MODEL_PATH="/usr/local/share/FluxSand/model/model.onnx")
 
 # ---------------------------------------------------------------------------------------
 # Project
@@ -109,6 +109,12 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/model/
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/
   DESTINATION share/${PROJECT_NAME}/src)
+  
+install(FILES ${CMAKE_SOURCE_DIR}/services/fluxsand.service
+  DESTINATION /lib/systemd/system)
+
+install(TARGETS FluxSand
+  RUNTIME DESTINATION bin)
 
 # ---------------------------------------------------------------------------------------
 # Build information
@@ -149,3 +155,7 @@ message(STATUS "C flags (Release):  ${CMAKE_C_FLAGS_RELEASE}")
 message(STATUS "CXX flags (General):${CMAKE_CXX_FLAGS}")
 message(STATUS "CXX flags (Debug):  ${CMAKE_CXX_FLAGS_DEBUG}")
 message(STATUS "CXX flags (Release):${CMAKE_CXX_FLAGS_RELEASE}")
+
+install(CODE "execute_process(COMMAND systemctl daemon-reload)")
+install(CODE "execute_process(COMMAND systemctl enable fluxsand.service)")
+install(CODE "execute_process(COMMAND systemctl daemon-reexec)")

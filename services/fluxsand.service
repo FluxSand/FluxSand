@@ -1,0 +1,17 @@
+[Unit]
+Description=FluxSand Application
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/FluxSand
+Restart=on-failure
+RestartSec=2
+User=XRobot
+WorkingDirectory=/usr/local/bin
+StandardOutput=journal
+StandardError=journal
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+[Install]
+WantedBy=multi-user.target
