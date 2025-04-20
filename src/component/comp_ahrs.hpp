@@ -50,7 +50,7 @@ class AHRS {
     now_ = std::chrono::duration_cast<std::chrono::microseconds>(
         std::chrono::system_clock::now().time_since_epoch());
 
-    dt_ = static_cast<float>(now_.count() - last_wakeup_.count()) / 1000000.0f;
+    dt_ = 0.001f;
     last_wakeup_ = now_;
 
     float ax = accel_.x;
@@ -149,7 +149,7 @@ class AHRS {
     eulr_.pit = pitch;
     eulr_.rol = roll;
     eulr_.yaw = yaw;
-    
+
     if (data_callback_) {
       data_callback_(accel_, gyro_, eulr_);
     }
@@ -208,6 +208,10 @@ class AHRS {
                                const Type::Eulr&)>& callback) {
     data_callback_ = callback;
   }
+  Type::Quaternion quat_{};
+  Type::Eulr eulr_{};
+  Type::Vector3 accel_{};
+  Type::Vector3 gyro_{};
 
  private:
   std::chrono::duration<uint64_t, std::ratio<1, 1000000>> last_wakeup_;
@@ -215,13 +219,9 @@ class AHRS {
   std::chrono::duration<uint64_t, std::ratio<1, 1000000>> start_;
   float dt_ = 0.0f;
 
-  Type::Quaternion quat_{};
-  Type::Eulr eulr_{};
   Type::Quaternion quat_without_z_{};
   Type::Eulr eulr_without_yaw_{};
 
-  Type::Vector3 accel_{};
-  Type::Vector3 gyro_{};
   Type::Vector3 filtered_accel_{};
 
   std::binary_semaphore ready_;
