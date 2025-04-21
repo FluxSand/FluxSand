@@ -1,4 +1,4 @@
-PROJECT_NAME = "libxr"
+PROJECT_NAME = "FluxSand"
 PROJECT_NUMBER = "1.0"
 OUTPUT_DIRECTORY = "./doc"
 GENERATE_HTML = YES
@@ -45,5 +45,4 @@ PREDEFINED = "__DOXYGEN__" \
 HAVE_DOT = YES
 CLASS_DIAGRAMS = YES
 SORT_GROUP_NAMES = YES
-PROJECT_BRIEF = "Want to be the best embedded framework"
-USE_MDFILE_AS_MAINPAGE = README.md
+PROJECT_BRIEF = "FluxSand - Interactive Digital Hourglass"
