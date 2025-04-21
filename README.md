@@ -34,6 +34,26 @@
 
 ---
 
+
+**📌 Key Technologies**  
+
+- **Event-driven programming**: Uses **callbacks** to process sensor inputs & LED refresh, avoiding blocking operations and ensuring responsiveness.
+- **Multithreading control**: Separates data acquisition & display updates for real-time performance.
+- **GitHub version control**: Implements **Git for version tracking**, including commit history, issue tracking, and pull requests for structured development.
+
+---
+
+## **🚀 Development Progress**
+
+🔄 **Hardware selection & procurement** ························································································✅[Completed]  
+🔄 **Initial code framework setup (C++ & sensor drivers)** ···················································✅[Completed]    
+🔄 **Optimization of real-time data processing** ·········································································✅[Completed]    
+🔄 **Enhancing user interaction (touch buttons & LED animation)** ·································✅[Completed]    
+🔄 **Software testing & debugging** ··································································································✅[Completed]    
+📢 **Project promotion (social media & Hackaday)** ·································································✅[Completed]  
+
+---
+
 ## **🎯 Key Features**
 
 ✅ **Real-time sensor data acquisition**: The MPU-9250 gyroscope & accelerometer detect device orientation to control sand flow direction and speed.  
@@ -70,18 +90,48 @@
 This project is developed primarily in **C++**, running on a **Linux + Raspberry Pi** platform, utilizing an **event-driven real-time architecture** to ensure seamless interactions.
 
 **📌 Code Structure**
-TODO: Add detailed code organization once development is complete.
+
+The source code is organized under the `src/` directory as follows:
+
+```
+src/
+├── main.cpp               # Main entry point of the program
+├── ahrs/                  # AHRS (Attitude and Heading Reference System) algorithm module
+│   ├── ahrs.cpp
+│   └── ahrs.h
+├── drivers/               # Hardware drivers
+│   ├── mpu9250.cpp        # Driver for MPU9250 gyroscope and accelerometer
+│   ├── mpu9250.h
+│   ├── led_matrix.cpp     # Control logic for MAX7219 LED matrix
+│   └── led_matrix.h
+├── gui/                   # GUI and display logic
+│   ├── display.cpp
+│   └── display.h
+└── utils/                 # Utility functions and common helpers
+    ├── timer.cpp
+    └── timer.h
+```
+
+Additional directories and files:
+
+- `third_party/libxr/`: Integrated third-party library for extended functionality.
+- `imgs/`: Visual assets and diagrams used in the README.
+- `.vscode/`: Editor configuration files for VSCode development environment.
+- `.clang-format`, `.clangd`: Code formatting and language server configuration.
+- `CMakeLists.txt`: CMake configuration file for building the project.
 
 ---
 
+
 ## 👉 Division of responsibilities among team members
 
-- **Cong Liu (3055752L)**: [e.g.A]
-- **Xinkai Li (3030890L)**: [e.g. B]
-- **Jiahe Chen (3049643C)**: [e.g. C]
-- **Haoming Wang (2987352W)**: [e.g. D]
-- **Lianxiao Yao (3048246Y)**: [e.g.E]
-- **Yinjie Fan (3062833F)**: [e.g. F]
+- **Cong Liu (3055752L)**: Designed and implemented AHRS, systemd service integration, LED smoothing, and overall architecture control.
+- **Xinkai Li (3030890L)**: Integrated ADS1115 module; refactored and cleaned up third-party dependencies.
+- **Jiahe Chen (3049643C)**: Refined sensor fusion algorithms, improved inference runtime behavior, and optimized visual output handling.
+- **Haoming Wang (2987352W)**: Developed drivers for I2C peripherals including AHT20, BMP280, MAX7219; contributed to device interfacing.
+- **Lianxiao Yao (3048246Y)**: Developed GUI logic including countdown display, implemented motion-based flow behavior and fixed direction control.
+- **Yinjie Fan (3062833F)**: Implemented GUI components, humidity/temperature rendering, and contributed to LED matrix port control.
+
 
 ---
 
@@ -103,6 +153,10 @@ See [**Usage Guide**](https://fluxsand.github.io/3.run/README.html) to compile a
 
 Full program need to be compiled and installed on the Raspberry Pi 5B. But the unit test can be run on any Linux platform with onnxruntime.
 
-## 📸 Social Media
+## **🔗 Relevant Links**
 
-Please see our [Instagram](https://www.instagram.com/fluxsand/reels/)
+[**Documentation 📝**](https://fluxsand.github.io/)  
+[**GitHub Repository 🔗**](https://github.com/FluxSand/FluxSand)  
+[**Demo Video 🎥**](https://www.instagram.com/reel/DItV1Tgt_SF/?igsh=OG52cnpjYjh2Z2E0)  
+[**Social Media Promotion 📢**](https://www.instagram.com/fluxsand?igsh=Z2p2bWhleHZlZGo=)
+
