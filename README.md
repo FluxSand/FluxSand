@@ -102,3 +102,7 @@ TODO: Add detailed code organization once development is complete.
 See [**Usage Guide**](https://fluxsand.github.io/3.run/README.html) to compile and install the program.
 
 Full program need to be compiled and installed on the Raspberry Pi 5B. But the unit test can be run on any Linux platform with onnxruntime.
+
+## 📸 Social Media
+
+Please see our [Instagram](https://www.instagram.com/fluxsand/reels/)
