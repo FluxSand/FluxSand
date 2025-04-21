@@ -100,7 +100,6 @@ class ModeManager {
                             .count();
       if (elapsed >= timer_duration_sec_) {
         remaining = 0;
-        timer_active_ = false;
         std::cout << "Timer finished\n";
       } else {
         remaining -= elapsed;
