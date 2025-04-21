@@ -121,6 +121,7 @@ class FluxSand {
         if (remaining == 0 && mode_manager_.IsTimerRunning()) {
           pwm_buzzer_->PlayNote(PWM::NoteName::C, 8, 1000);
           gui_->SandDisable();
+          mode_manager_.StopTimer();
         }
 
         if (landscape) {
