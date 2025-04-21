@@ -56,8 +56,10 @@ endif()
 
 # ---------------------------------------------------------------------------------------
 # libgpiod
+if(NOT TEST)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GPIOD REQUIRED libgpiod)
+endif() 
 
 # ---------------------------------------------------------------------------------------
 # Sources
