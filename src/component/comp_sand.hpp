@@ -11,11 +11,21 @@ class SandGrid {
   static constexpr int SIZE = 16;
   static constexpr float PI = 3.14159265f;
 
-  std::array<std::array<bool, SIZE>, SIZE> grid = {};
+  const std::array<std::array<bool, SIZE>, SIZE>& GetGrid() const {
+    return grid_;
+  }
+
+  bool GetCell(int r, int c) const {
+    return InBounds(r, c) ? grid_[r][c] : false;
+  }
+
+  void SetCell(int r, int c, bool val) {
+    if (InBounds(r, c)) grid_[r][c] = val;
+  }
 
   bool AddNewSand() {
-    if (grid[15][15] == false) {
-      grid[15][15] = true;
+    if (grid_[15][15] == false) {
+      grid_[15][15] = true;
       return true;
     } else {
       return false;
@@ -26,13 +36,13 @@ class SandGrid {
     std::vector<std::pair<int, int>> candidates;
     for (int row = 0; row < SIZE; ++row) {
       for (int col = 0; col < SIZE; ++col) {
-        if (grid[row][col]) {
+        if (grid_[row][col]) {
           for (int dr = -1; dr <= 1; ++dr) {
             for (int dc = -1; dc <= 1; ++dc) {
               if (dr == 0 && dc == 0) continue;
               int nr = row + dr;
               int nc = col + dc;
-              if (InBounds(nr, nc) && !grid[nr][nc]) {
+              if (InBounds(nr, nc) && !grid_[nr][nc]) {
                 candidates.emplace_back(nr, nc);
               }
             }
@@ -44,7 +54,7 @@ class SandGrid {
     if (candidates.empty()) return false;
     std::uniform_int_distribution<int> dist(0, candidates.size() - 1);
     auto [r, c] = candidates[dist(rng_)];
-    grid[r][c] = true;
+    grid_[r][c] = true;
     return true;
   }
 
@@ -88,7 +98,7 @@ class SandGrid {
 
     // ==== Traverse and decide moves ====
     for (auto [r, c] : traversal_order) {
-      if (!grid[r][c]) continue;  // Skip if no sand
+      if (!grid_[r][c]) continue;  // Skip if no sand
 
       float noise_deg = noise_dist(rng_);
       float cos_threshold = std::cos((55.0f + noise_deg) * PI / 180.0f);
@@ -100,7 +110,7 @@ class SandGrid {
       for (auto [dr, dc] : directions) {
         int nr = r + dr;
         int nc = c + dc;
-        if (!InBounds(nr, nc) || grid[nr][nc])
+        if (!InBounds(nr, nc) || grid_[nr][nc])
           continue;  // Skip if out of bounds or not empty
 
         float vx = static_cast<float>(dc);
@@ -135,8 +145,8 @@ class SandGrid {
 
     // ==== Perform all queued moves ====
     for (auto [r, c, nr, nc] : moves) {
-      grid[r][c] = false;
-      grid[nr][nc] = true;
+      grid_[r][c] = false;
+      grid_[nr][nc] = true;
     }
 
     // Optional: Debug output
@@ -144,14 +154,14 @@ class SandGrid {
   }
 
   void Clear() {
-    for (auto& row : grid) {
+    for (auto& row : grid_) {
       row.fill(false);
     }
   }
 
   int Count() const {
     int total = 0;
-    for (const auto& row : grid) {
+    for (const auto& row : grid_) {
       for (bool v : row) {
         total += v;
       }
@@ -161,25 +171,86 @@ class SandGrid {
 
   static bool MoveSand(SandGrid* up, SandGrid* down, float angle) {
     if (angle < 90 || angle > 270) {
-      if (up->grid[0][0] && !down->grid[15][15]) {
-        down->grid[15][15] = true;
-        up->grid[0][0] = false;
+      if (up->grid_[0][0] && !down->grid_[15][15]) {
+        down->grid_[15][15] = true;
+        up->grid_[0][0] = false;
         return true;
       }
     } else {
-      if (!up->grid[0][0] && down->grid[15][15]) {
-        up->grid[0][0] = true;
-        down->grid[15][15] = false;
+      if (!up->grid_[0][0] && down->grid_[15][15]) {
+        up->grid_[0][0] = true;
+        down->grid_[15][15] = false;
         return true;
       }
     }
     return false;
   }
 
+  void RunUnitTest() {
+    std::cout << "[SandGrid::UnitTest] Starting sand grid test...\n";
+
+    SandGrid test;
+    test.Clear();
+
+    // Test AddNewSand
+    bool added = test.AddNewSand();
+    std::cout << std::format("[Test] AddNewSand → {}\n",
+                             added ? "✅ Success" : "❌ Failed");
+
+    int before = test.Count();
+    test.StepOnce(0.0f);
+    int after = test.Count();
+    std::cout << std::format("[Test] StepOnce → Particle count: {} → {}\n",
+                             before, after);
+
+    // Test MoveSand (grid transfer)
+    SandGrid up, down;
+    up.Clear();
+    down.Clear();
+    up.SetCell(0, 0, true);
+    bool moved = SandGrid::MoveSand(&up, &down, 45.0f);
+    std::cout << std::format("[Test] MoveSand(→down) → {}\n",
+                             moved ? "✅ Success" : "❌ Failed");
+
+    // Test Clear
+    test.Clear();
+    std::cout << std::format("[Test] Clear → Count after clear: {}\n",
+                             test.Count());
+
+    // StepOnce performance test
+    std::cout << "[Perf] Running StepOnce 100 times...\n";
+    for (int i = 0; i < 50; ++i) {
+      test.AddGrainNearExisting();  // Fill a bit
+    }
+
+    std::vector<float> times;
+    times.reserve(100);
+    for (int i = 0; i < 100; ++i) {
+      auto start = std::chrono::high_resolution_clock::now();
+      test.StepOnce(0.0f);
+      auto end = std::chrono::high_resolution_clock::now();
+      float ms = std::chrono::duration<float, std::micro>(end - start).count();
+      times.push_back(ms);
+    }
+
+    auto [min_it, max_it] = std::minmax_element(times.begin(), times.end());
+    float avg =
+        std::accumulate(times.begin(), times.end(), 0.0f) / times.size();
+
+    std::cout << std::format(
+        "[Perf] StepOnce timing (µs): min = {:>6.2f}, max = {:>6.2f}, avg = "
+        "{:>6.2f}\n",
+        *min_it, *max_it, avg);
+
+    std::cout << "[SandGrid::UnitTest] ✅ Test complete.\n";
+  }
+
  private:
   bool InBounds(int r, int c) const {
     return r >= 0 && r < SIZE && c >= 0 && c < SIZE;
   }
+
+  std::array<std::array<bool, SIZE>, SIZE> grid_ = {};
 
   std::mt19937 rng_{std::random_device{}()};
 };

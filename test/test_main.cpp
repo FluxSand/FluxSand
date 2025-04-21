@@ -58,25 +58,24 @@ int main() {
 
   /* Orientation prediction and CNN model inference */
   AHRS ahrs;
-  mpu9250.RegisterDataCallback(std::bind(
-      &AHRS::OnData, &ahrs, std::placeholders::_1, std::placeholders::_2));
+  ahrs.RunUnitTest();
 
   InferenceEngine inference_engine(ONNX_MODEL_PATH, 0.1f, 0.65f, 6, 3);
-  ahrs.RegisterDataCallback(std::bind(
-      &InferenceEngine::OnData, &inference_engine, std::placeholders::_1,
-      std::placeholders::_2, std::placeholders::_3));
+  inference_engine.RunUnitTest();
 
   CompGuiX gui(display);
+  gui.RunUnitTest();
 
-  gui.Clear();
+  SandGrid grid;
+  grid.RunUnitTest();
 
   /* Main loop */
   FluxSand fluxsand(&pwm_buzzer, &gpio_user_button_1, &gpio_user_button_2, &gui,
                     &bmp280, &aht20, &ads1115, &ahrs, &inference_engine);
 
-  while (true) {
-    fluxsand.Run();
-  }
+  fluxsand.RunUnitTest();
 
+  exit(0);
+  
   return 0;
 }

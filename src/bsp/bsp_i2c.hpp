@@ -28,12 +28,12 @@ class I2cDevice {
     assert(!device.empty()); /* Ensure device string is valid */
 
     if (fd_ < 0) {
-      throw std::runtime_error("Failed to open I2C device: " + device);
+      std::perror("Failed to open I2C device");
     }
 
     if (ioctl(fd_, I2C_SLAVE, addr_) < 0) {
       close(fd_);
-      throw std::runtime_error("Failed to configure I2C address");
+      std::perror("Failed to configure I2C address");
     }
   }
 
@@ -52,12 +52,12 @@ class I2cDevice {
    */
   uint8_t ReadRegister(uint8_t reg) {
     if (write(fd_, &reg, 1) != 1) {
-      throw std::runtime_error("I2C write (set register) failed");
+      std::perror("I2C write (set register) failed");
     }
 
     uint8_t value = 0;
     if (read(fd_, &value, 1) != 1) {
-      throw std::runtime_error("I2C read failed");
+      std::perror("I2C read failed");
     }
 
     return value;
@@ -72,7 +72,7 @@ class I2cDevice {
   void WriteRegister(uint8_t reg, uint8_t value) {
     uint8_t buf[2] = {reg, value};
     if (write(fd_, buf, 2) != 2) {
-      throw std::runtime_error("I2C write failed");
+      std::perror("I2C write failed");
     }
   }
 
@@ -87,11 +87,11 @@ class I2cDevice {
     assert(buffer);
 
     if (write(fd_, &reg, 1) != 1) {
-      throw std::runtime_error("I2C write (set start register) failed");
+      std::perror("I2C write (set start register) failed");
     }
 
     if (read(fd_, buffer, length) != static_cast<ssize_t>(length)) {
-      throw std::runtime_error("I2C multi-byte read failed");
+      std::perror("I2C multi-byte read failed");
     }
   }
 
@@ -105,7 +105,7 @@ class I2cDevice {
     assert(data);
 
     if (write(fd_, data, length) != static_cast<ssize_t>(length)) {
-      throw std::runtime_error("I2C raw write failed");
+      std::perror("I2C raw write failed");
     }
   }
 
