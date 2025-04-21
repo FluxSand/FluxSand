@@ -12,7 +12,6 @@
 
 🚀 **FluxSand** is an **interactive digital hourglass** designed using **real-time embedded systems**. It combines **gyroscope sensing, LED matrix display, and touch interaction** to create a dynamic and visually engaging timekeeping experience. By leveraging advanced sensor fusion and real-time processing, this system responds seamlessly to user actions, providing an immersive interaction.
 
----
 
 ## **📌 Project Overview**
 
@@ -21,7 +20,7 @@
 - **Smart Flow Effect**: The LED matrix dynamically displays the movement of sand grains, adapting to device orientation.
 - **Multiple Modes**:
   - **Pomodoro Timer Mode**
-  - **Weather Clock Mode**
+  - **Temperature and Humidity Mode**
   - **Timing/Countdown Mode**
 - **Enhanced Physical Interaction**: Users can flip the device or use touch buttons to control functions like pause, speed adjustment, or reset.
 - **Adaptive Brightness**: A light sensor detects ambient light levels and automatically adjusts LED brightness for optimal visibility.
@@ -32,16 +31,20 @@
 <p>
 </div>
 
----
-
-
 **📌 Key Technologies**  
 
 - **Event-driven programming**: Uses **callbacks** to process sensor inputs & LED refresh, avoiding blocking operations and ensuring responsiveness.
 - **Multithreading control**: Separates data acquisition & display updates for real-time performance.
 - **GitHub version control**: Implements **Git for version tracking**, including commit history, issue tracking, and pull requests for structured development.
 
----
+## 👉 Division of responsibilities among team members
+- **Cong Liu (3055752L)**: Designed and implemented AHRS, systemd service integration, LED smoothing, and overall architecture control.
+- **Xinkai Li (3030890L)**: Integrated ADS1115 module; refactored and cleaned up third-party dependencies.
+- **Jiahe Chen (3049643C)**: Refined sensor fusion algorithms, improved inference runtime behavior, and optimized visual output handling.
+- **Haoming Wang (2987352W)**: Developed drivers for I2C peripherals including AHT20, BMP280, MAX7219; contributed to device interfacing.
+- **Lianxiao Yao (3048246Y)**: Developed GUI logic including countdown display, implemented motion-based flow behavior and fixed direction control.
+- **Yinjie Fan (3062833F)**: Implemented GUI components, humidity/temperature rendering, and contributed to LED matrix port control.
+
 
 ## **🚀 Development Progress**
 
@@ -52,7 +55,6 @@
 🔄 **Software testing & debugging** ··································································································✅[Completed]    
 📢 **Project promotion (social media & Hackaday)** ·································································✅[Completed]  
 
----
 
 ## **🎯 Key Features**
 
@@ -63,7 +65,6 @@
 ✅ **Audio feedback**: The buzzer signals key events, such as countdown completion or mode changes.  
 ✅ **Temperature & air pressure detection**: The AHT20 + BMP280 module measures ambient temperature and air pressure readings for the weather clock mode.  
 
----
 
 ## **🔧 Hardware Components**
 
@@ -81,8 +82,6 @@
 | **Type-C Cable**          | 24P 3A data cable                          | 1        | Data & power transfer                               |
 | **Wires/Dupont Lines**    | Various                                    | -        | Circuit connections                                 |
 | **Prototyping Board**     | Breadboard                                 | -        | Circuit assembly                                    |
-
----
 
 
 ## **💻 Software Architecture**
@@ -112,28 +111,35 @@ src/
     └── timer.h
 ```
 
-Additional directories and files:
-
-- `third_party/libxr/`: Integrated third-party library for extended functionality.
-- `imgs/`: Visual assets and diagrams used in the README.
-- `.vscode/`: Editor configuration files for VSCode development environment.
-- `.clang-format`, `.clangd`: Code formatting and language server configuration.
-- `CMakeLists.txt`: CMake configuration file for building the project.
-
----
+> Additional directories and files:
+> 
+> - `third_party/libxr/`: Integrated third-party library for extended functionality.
+> - `imgs/`: Visual assets and diagrams used in the README.
+> - `.vscode/`: Editor configuration files for VSCode development environment.
+> - `.clang-format`, `.clangd`: Code formatting and language server configuration.
+> - `CMakeLists.txt`: CMake configuration file for building the project.
 
 
-## 👉 Division of responsibilities among team members
+## **📝3rd Party Components**
 
-- **Cong Liu (3055752L)**: Designed and implemented AHRS, systemd service integration, LED smoothing, and overall architecture control.
-- **Xinkai Li (3030890L)**: Integrated ADS1115 module; refactored and cleaned up third-party dependencies.
-- **Jiahe Chen (3049643C)**: Refined sensor fusion algorithms, improved inference runtime behavior, and optimized visual output handling.
-- **Haoming Wang (2987352W)**: Developed drivers for I2C peripherals including AHT20, BMP280, MAX7219; contributed to device interfacing.
-- **Lianxiao Yao (3048246Y)**: Developed GUI logic including countdown display, implemented motion-based flow behavior and fixed direction control.
-- **Yinjie Fan (3062833F)**: Implemented GUI components, humidity/temperature rendering, and contributed to LED matrix port control.
+🔹 [**Madgwick's filter**](https://github.com/xioTechnologies/Open-Source-AHRS-With-x-IMU): Madgwick algorithm for orientation estimation.
+
+🔹 [**XRobot**](https://github.com/xrobot-org/XRobot): An embedded software framework for MCU, Arm/x86 Linux and simulator.
+
+## **🧠 Reference & Tutorials**
+🔹 [**Class Reference**](https://fluxsand.github.io/FluxSand/class_flux_sand.html): A visual documentation of reference for classes. 
+
+🔹 [**Guide for Compile & Installation**](https://fluxsand.github.io/3.run/README.html): A help documentation on how to compile and register as a system service.  
+
+> *Full program need to be compiled and installed on the Raspberry Pi 5B. But the unit test can be run on any Linux platform with onnxruntime.*  
+
+🔹 [**Hardware References**](https://github.com/FluxSand/Hardware): This repository provides the complete set of Gerber files, drill data, and schematic required for manufacturing and testing a PCB design.
 
 
----
+## **📊 Test & Assessment**
+See this [**documentation**](https://fluxsand.github.io/4.assessment/README.html) to learn how we test and evaluate various modules of the system. This section provides an overview of testing and evaluation efforts conducted across various modules of the FluxSand system. The documentation focuses on real-time behavioral analysis of software components running on the Raspberry Pi platform. Preliminary sensor connection checks are included, while future work may involve expanded testing of hardware robustness and signal integrity.
+
+
 
 ## **📢 Future Improvements**
 
@@ -141,17 +147,6 @@ Additional directories and files:
 🔹 **Wireless remote control**, allowing users to configure settings via WiFi/Bluetooth.  
 🔹 **Data storage & visualization**, enabling users to track historical temperature & air pressure readings via a web interface.  
 
-## **📝References & Acknowledgments**
-
-🔹 [**Madgwick's filter**](https://github.com/xioTechnologies/Open-Source-AHRS-With-x-IMU): Madgwick algorithm for orientation estimation.
-
-🔹 [**XRobot**](https://github.com/xrobot-org/XRobot): An embedded software framework for MCU, Arm/x86 Linux and simulator.
-
-## **🛠️ Compile & Installation**
-
-See [**Usage Guide**](https://fluxsand.github.io/3.run/README.html) to compile and install the program.
-
-Full program need to be compiled and installed on the Raspberry Pi 5B. But the unit test can be run on any Linux platform with onnxruntime.
 
 ## **🔗 Relevant Links**
 
@@ -159,4 +154,3 @@ Full program need to be compiled and installed on the Raspberry Pi 5B. But the u
 [**GitHub Repository 🔗**](https://github.com/FluxSand/FluxSand)  
 [**Demo Video 🎥**](https://www.instagram.com/reel/DItV1Tgt_SF/?igsh=OG52cnpjYjh2Z2E0)  
 [**Social Media Promotion 📢**](https://www.instagram.com/fluxsand?igsh=Z2p2bWhleHZlZGo=)
-
