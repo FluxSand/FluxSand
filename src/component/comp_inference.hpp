@@ -204,6 +204,41 @@ class InferenceEngine {
     data_callback_ = callback;
   }
 
+  void RunUnitTest() {
+    std::cout
+        << "[InferenceEngine::UnitTest] Starting inference timing test...\n";
+
+    const int N = 50;  // Number of inference runs
+    std::vector<float> dummy_input(input_tensor_size_, 0.0f);  // All zero input
+
+    std::vector<float> timings_ms;
+    timings_ms.reserve(N);
+
+    for (int i = 0; i < N; ++i) {
+      auto t_start = std::chrono::high_resolution_clock::now();
+      ModelOutput result = RunInference(dummy_input);
+      auto t_end = std::chrono::high_resolution_clock::now();
+
+      float ms =
+          std::chrono::duration<float, std::milli>(t_end - t_start).count();
+      timings_ms.push_back(ms);
+
+      std::cout << std::format("Run {:02d} → {:>7.3f} ms | Result: {}\n", i + 1,
+                               ms, LABELS.at(result));
+    }
+
+    auto [min_it, max_it] =
+        std::minmax_element(timings_ms.begin(), timings_ms.end());
+    float avg = std::accumulate(timings_ms.begin(), timings_ms.end(), 0.0f) / N;
+
+    std::cout << "\n[Inference Timing Summary]\n";
+    std::cout << std::format("  Total Runs    : {}\n", N);
+    std::cout << std::format("  Min Time (ms) : {:>7.3f}\n", *min_it);
+    std::cout << std::format("  Max Time (ms) : {:>7.3f}\n", *max_it);
+    std::cout << std::format("  Avg Time (ms) : {:>7.3f}\n", avg);
+    std::cout << "[InferenceEngine::UnitTest] ✅ Timing test complete.\n";
+  }
+
  private:
   /* Sensor data collection */
   void CollectSensorData() {

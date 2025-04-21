@@ -208,6 +208,89 @@ class AHRS {
                                const Type::Eulr&)>& callback) {
     data_callback_ = callback;
   }
+
+  void RunUnitTest() {
+    std::cout << "[UnitTest] Starting AHRS unit test...\n";
+
+    // ---- Initialization section ----
+    quat_ = {1.0f, 0.0f, 0.0f, 0.0f};
+    accel_ = {0.01f, 0.01f, 1.0f};  // Slight tilt
+    gyro_ = {0.0f, 0.0f, 0.0f};
+
+    auto current_time = std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::system_clock::now().time_since_epoch());
+
+    start_ = now_ = last_wakeup_ = current_time;
+    dt_ = 0.001f;  // 1ms sample period
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+
+    // ---- Run Update ----
+    auto t1 = std::chrono::high_resolution_clock::now();
+    Update();
+    auto t2 = std::chrono::high_resolution_clock::now();
+
+    // ---- Convert to Euler angles ----
+    GetEulr();
+    auto t3 = std::chrono::high_resolution_clock::now();
+
+    // ---- Output ----
+    std::cout << "[UnitTest] Quaternion: ";
+    std::cout << std::format(
+        "[q0={:+.4f}, q1={:+.4f}, q2={:+.4f}, q3={:+.4f}]\n", quat_.q0,
+        quat_.q1, quat_.q2, quat_.q3);
+
+    std::cout << "[UnitTest] Euler Angles (rad): ";
+    std::cout << std::format("[rol={:+.4f}, pit={:+.4f}, yaw={:+.4f}]\n",
+                             eulr_.rol.Value(), eulr_.pit.Value(),
+                             eulr_.yaw.Value());
+
+    auto t4 = std::chrono::high_resolution_clock::now();
+
+    // ---- Verification ----
+    auto normalize_angle = [](float rad) -> float {
+      while (rad > M_PI) rad -= 2.0f * M_PI;
+      while (rad < -M_PI) rad += 2.0f * M_PI;
+      return rad;
+    };
+
+    float norm_rol = normalize_angle(eulr_.rol.Value());
+    float norm_pit = normalize_angle(eulr_.pit.Value());
+    float norm_yaw = normalize_angle(eulr_.yaw.Value());
+
+    const float tolerance = 0.1f;  // ~5.7 degrees
+
+    if (std::abs(norm_rol) < tolerance && std::abs(norm_pit) < tolerance &&
+        std::abs(norm_yaw) < tolerance) {
+      std::cout
+          << "[UnitTest] ✅ Test Passed: Orientation is correct at rest.\n";
+    } else {
+      std::cout << "[UnitTest] ❌ Test Failed: Unexpected orientation.\n";
+    }
+
+    auto t5 = std::chrono::high_resolution_clock::now();
+
+    // ---- Timing report ----
+    std::cout << std::format(
+        "[Timing] Init & assignment     : {:>8.2f} µs\n",
+        std::chrono::duration<float, std::micro>(t1 - t0).count());
+    std::cout << std::format(
+        "[Timing] Update()              : {:>8.2f} µs\n",
+        std::chrono::duration<float, std::micro>(t2 - t1).count());
+    std::cout << std::format(
+        "[Timing] GetEulr()             : {:>8.2f} µs\n",
+        std::chrono::duration<float, std::micro>(t3 - t2).count());
+    std::cout << std::format(
+        "[Timing] Output                : {:>8.2f} µs\n",
+        std::chrono::duration<float, std::micro>(t4 - t3).count());
+    std::cout << std::format(
+        "[Timing] Verify                : {:>8.2f} µs\n",
+        std::chrono::duration<float, std::micro>(t5 - t4).count());
+    std::cout << std::format(
+        "[Timing] Total                 : {:>8.2f} µs\n",
+        std::chrono::duration<float, std::micro>(t5 - t0).count());
+  }
+
   Type::Quaternion quat_{};
   Type::Eulr eulr_{};
   Type::Vector3 accel_{};

@@ -186,6 +186,65 @@ class SandGrid {
     return false;
   }
 
+  void RunUnitTest() {
+    std::cout << "[SandGrid::UnitTest] Starting sand grid test...\n";
+
+    SandGrid test;
+    test.Clear();
+
+    // Test AddNewSand
+    bool added = test.AddNewSand();
+    std::cout << std::format("[Test] AddNewSand → {}\n",
+                             added ? "✅ Success" : "❌ Failed");
+
+    int before = test.Count();
+    test.StepOnce(0.0f);
+    int after = test.Count();
+    std::cout << std::format("[Test] StepOnce → Particle count: {} → {}\n",
+                             before, after);
+
+    // Test MoveSand (grid transfer)
+    SandGrid up, down;
+    up.Clear();
+    down.Clear();
+    up.SetCell(0, 0, true);
+    bool moved = SandGrid::MoveSand(&up, &down, 45.0f);
+    std::cout << std::format("[Test] MoveSand(→down) → {}\n",
+                             moved ? "✅ Success" : "❌ Failed");
+
+    // Test Clear
+    test.Clear();
+    std::cout << std::format("[Test] Clear → Count after clear: {}\n",
+                             test.Count());
+
+    // StepOnce performance test
+    std::cout << "[Perf] Running StepOnce 100 times...\n";
+    for (int i = 0; i < 50; ++i) {
+      test.AddGrainNearExisting();  // Fill a bit
+    }
+
+    std::vector<float> times;
+    times.reserve(100);
+    for (int i = 0; i < 100; ++i) {
+      auto start = std::chrono::high_resolution_clock::now();
+      test.StepOnce(0.0f);
+      auto end = std::chrono::high_resolution_clock::now();
+      float ms = std::chrono::duration<float, std::micro>(end - start).count();
+      times.push_back(ms);
+    }
+
+    auto [min_it, max_it] = std::minmax_element(times.begin(), times.end());
+    float avg =
+        std::accumulate(times.begin(), times.end(), 0.0f) / times.size();
+
+    std::cout << std::format(
+        "[Perf] StepOnce timing (µs): min = {:>6.2f}, max = {:>6.2f}, avg = "
+        "{:>6.2f}\n",
+        *min_it, *max_it, avg);
+
+    std::cout << "[SandGrid::UnitTest] ✅ Test complete.\n";
+  }
+
  private:
   bool InBounds(int r, int c) const {
     return r >= 0 && r < SIZE && c >= 0 && c < SIZE;

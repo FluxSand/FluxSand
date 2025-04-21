@@ -28,6 +28,9 @@ class ModeManager {
   // Get the current mode.
   Mode GetMode() const { return mode_; }
 
+  // Set the current mode.
+  void SetMode(Mode mode) { mode_ = mode; }
+
   // Set or query display orientation (portrait/landscape).
   void SetLandscape(bool val) { landscape_ = val; }
   bool IsLandscape() const { return landscape_; }

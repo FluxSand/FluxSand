@@ -389,4 +389,43 @@ class CompGuiX {
 
   /// Reset sand simulation
   void Reset() { reset_ = true; }
+
+  void RunUnitTest() {
+    std::cout << "[CompGuiX::UnitTest] Starting GUI unit test...\n";
+
+    SetLight(5);  // Set medium brightness
+    SetOrientation(Orientation::Portrait);
+
+    // Test digit drawing
+    std::cout << "[Test] Draw number 42 in portrait...\n";
+    Draw(RegionID::SCREEN_0_PORTRAIT, 42);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    std::cout << "[Test] Draw time 12:34 in portrait...\n";
+    RenderTimePortrait(12, 34);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    std::cout << "[Test] Draw time 12:34 in landscape...\n";
+    RenderTimeLandscape(12, 34);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    std::cout << "[Test] Render humidity icon...\n";
+    RenderHumidity(65);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    std::cout << "[Test] Render temperature icon...\n";
+    RenderTemperature(23);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    std::cout << "[Test] Enable sand...\n";
+    SandEnable();
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::cout << "[Test] Reset sand...\n";
+    Reset();
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::cout << "[Test] Disable sand...\n";
+    SandDisable();
+
+    std::cout << "[CompGuiX::UnitTest] ✅ Test complete.\n";
+  }
 };

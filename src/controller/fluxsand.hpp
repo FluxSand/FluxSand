@@ -155,6 +155,43 @@ class FluxSand {
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
   }
 
+  void RunUnitTest() {
+    std::cout << "[FluxSand::UnitTest] Starting application unit test...\n";
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+
+    // Simulate a full Run() frame for each mode
+    for (int i = 0; i <= static_cast<int>(ModeManager::Mode::TIMER); ++i) {
+      ModeManager::Mode mode = static_cast<ModeManager::Mode>(i);
+      std::cout << std::format("  [Test] Simulating mode: {}\n", i);
+
+      // Force mode and sub-states
+      mode_manager_.SetMode(mode);
+      switch (mode) {
+        case ModeManager::Mode::STOPWATCH:
+          mode_manager_.StartStopwatch();
+          break;
+        case ModeManager::Mode::TIMER:
+          mode_manager_.StartTimer(30);  // 30s dummy countdown
+          break;
+        default:
+          break;
+      }
+
+      auto start = std::chrono::high_resolution_clock::now();
+      Run();  // Run one cycle
+      auto end = std::chrono::high_resolution_clock::now();
+      float elapsed =
+          std::chrono::duration<float, std::milli>(end - start).count();
+      std::cout << std::format("    → Run() completed in {:.2f} ms\n", elapsed);
+    }
+
+    auto t1 = std::chrono::high_resolution_clock::now();
+    float total = std::chrono::duration<float, std::milli>(t1 - t0).count();
+    std::cout << std::format(
+        "[FluxSand::UnitTest] ✅ All modes tested in {:.2f} ms\n", total);
+  }
+
  private:
   // Stopwatch control functions
   void StartStopwatch() { mode_manager_.StartStopwatch(); }

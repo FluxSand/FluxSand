@@ -61,10 +61,11 @@ pkg_check_modules(GPIOD REQUIRED libgpiod)
 
 # ---------------------------------------------------------------------------------------
 # Sources
-file(GLOB BSP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/bsp/*.cpp")
-file(GLOB DEV_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/bsp/*.cpp")
-
-set(SOURCES src/main.cpp ${BSP_SOURCES} ${DEV_SOURCES})
+if(${TEST})
+  set(SOURCES test/test_main.cpp)
+else()
+  set(SOURCES src/main.cpp)
+endif()
 
 # ---------------------------------------------------------------------------------------
 # Executable
@@ -74,11 +75,21 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 # Include
 target_include_directories(${PROJECT_NAME}
   PRIVATE ${GPIOD_INCLUDE_DIRS}
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/bsp
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/device
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/component
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/controller
 )
+
+if(${TEST})
+  target_include_directories(${PROJECT_NAME}
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test
+  )
+  add_compile_definitions(TEST_BUILD)
+else()
+  target_include_directories(${PROJECT_NAME}
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/bsp
+  )
+endif()
 
 # ---------------------------------------------------------------------------------------
 # Link

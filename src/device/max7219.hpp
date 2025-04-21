@@ -257,11 +257,12 @@ class Max7219 {
     usleep(100);
     cs_->Write(0);
     usleep(100);
-
+#ifndef TEST_BUILD
     if (ioctl(spi_.Fd(), SPI_IOC_MESSAGE(1), &transfer) < 0) {
       cs_->Write(1);
       std::perror("SPI transfer failed");
     }
+#endif
 
     usleep(100);
     cs_->Write(1);
