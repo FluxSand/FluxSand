@@ -11,7 +11,7 @@ endif()
 
 # ---------------------------------------------------------------------------------------
 # ONNX Model Path
-add_compile_definitions(ONNX_MODEL_PATH="${CMAKE_CURRENT_SOURCE_DIR}/model/model.onnx")
+add_compile_definitions(ONNX_MODEL_PATH="/usr/local/share/FluxSand/model/model.onnx")
 
 # ---------------------------------------------------------------------------------------
 # Project
@@ -56,15 +56,18 @@ endif()
 
 # ---------------------------------------------------------------------------------------
 # libgpiod
+if(NOT TEST)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GPIOD REQUIRED libgpiod)
+endif() 
 
 # ---------------------------------------------------------------------------------------
 # Sources
-file(GLOB BSP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/bsp/*.cpp")
-file(GLOB DEV_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/bsp/*.cpp")
-
-set(SOURCES src/main.cpp ${BSP_SOURCES} ${DEV_SOURCES})
+if(${TEST})
+  set(SOURCES test/test_main.cpp)
+else()
+  set(SOURCES src/main.cpp)
+endif()
 
 # ---------------------------------------------------------------------------------------
 # Executable
@@ -74,10 +77,21 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 # Include
 target_include_directories(${PROJECT_NAME}
   PRIVATE ${GPIOD_INCLUDE_DIRS}
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/bsp
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/device
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/component
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/controller
 )
+
+if(${TEST})
+  target_include_directories(${PROJECT_NAME}
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test
+  )
+  add_compile_definitions(TEST_BUILD)
+else()
+  target_include_directories(${PROJECT_NAME}
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/bsp
+  )
+endif()
 
 # ---------------------------------------------------------------------------------------
 # Link
@@ -109,6 +123,12 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/model/
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/
   DESTINATION share/${PROJECT_NAME}/src)
+  
+install(FILES ${CMAKE_SOURCE_DIR}/services/fluxsand.service
+  DESTINATION /lib/systemd/system)
+
+install(TARGETS FluxSand
+  RUNTIME DESTINATION bin)
 
 # ---------------------------------------------------------------------------------------
 # Build information
@@ -149,3 +169,7 @@ message(STATUS "C flags (Release):  ${CMAKE_C_FLAGS_RELEASE}")
 message(STATUS "CXX flags (General):${CMAKE_CXX_FLAGS}")
 message(STATUS "CXX flags (Debug):  ${CMAKE_CXX_FLAGS_DEBUG}")
 message(STATUS "CXX flags (Release):${CMAKE_CXX_FLAGS_RELEASE}")
+
+install(CODE "execute_process(COMMAND systemctl daemon-reload)")
+install(CODE "execute_process(COMMAND systemctl enable fluxsand.service)")
+install(CODE "execute_process(COMMAND systemctl daemon-reexec)")

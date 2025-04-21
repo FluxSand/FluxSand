@@ -139,8 +139,10 @@ class Mpu9250 {
                              who_am_i);
 
     if (who_am_i != 0x71 && who_am_i != 0x68 && who_am_i != 0x70) {
-      throw std::runtime_error(std::format(
-          "Error: MPU9250 connection failed (WHO_AM_I: 0x{:02X})", who_am_i));
+      std::perror(
+          std::format("Error: MPU9250 connection failed (WHO_AM_I: 0x{:02X})",
+                      who_am_i)
+              .c_str());
     }
 
     /* Gyroscope clock source configuration */

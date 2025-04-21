@@ -31,13 +31,13 @@ class SpiDevice {
     assert(!device.empty()); /* Ensure device string is valid */
 
     if (fd_ < 0) {
-      throw std::runtime_error("Failed to open SPI device: " + device);
+      std::perror("Failed to open SPI device");
     }
 
     if (ioctl(fd_, SPI_IOC_WR_MODE, &mode) < 0 ||
         ioctl(fd_, SPI_IOC_WR_MAX_SPEED_HZ, &speed_) < 0) {
       close(fd_);
-      throw std::runtime_error("Failed to configure SPI device");
+      std::perror("Failed to configure SPI device");
     }
   }
 
@@ -71,7 +71,7 @@ class SpiDevice {
     usleep(10);
     if (ioctl(fd_, SPI_IOC_MESSAGE(1), &transfer) < 0) {
       cs->Write(1);
-      throw std::runtime_error("SPI read failed");
+      std::perror("SPI read failed");
     }
     cs->Write(1);
 
@@ -99,7 +99,7 @@ class SpiDevice {
     usleep(10);
     if (ioctl(fd_, SPI_IOC_MESSAGE(1), &transfer) < 0) {
       cs->Write(1);
-      throw std::runtime_error("SPI write failed");
+      std::perror("SPI write failed");
     }
     cs->Write(1);
   }
@@ -123,7 +123,7 @@ class SpiDevice {
     usleep(10);
     if (ioctl(fd_, SPI_IOC_MESSAGE(1), &transfer) < 0) {
       cs->Write(1);
-      throw std::runtime_error("SPI multiple read failed");
+      std::perror("SPI multiple read failed");
     }
     cs->Write(1);
 
