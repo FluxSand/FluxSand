@@ -20,7 +20,7 @@
 - **Smart Flow Effect**: The LED matrix dynamically displays the movement of sand grains, adapting to device orientation.
 - **Multiple Modes**:
   - **Pomodoro Timer Mode**
-  - **Weather Clock Mode**
+  - **Temperature and Humidity Mode**
   - **Timing/Countdown Mode**
 - **Enhanced Physical Interaction**: Users can flip the device or use touch buttons to control functions like pause, speed adjustment, or reset.
 - **Adaptive Brightness**: A light sensor detects ambient light levels and automatically adjusts LED brightness for optimal visibility.
@@ -137,7 +137,8 @@ src/
 
 
 ## **📊 Test & Assessment**
-See this [**documentation**](https://fluxsand.github.io/4.assessment/README.html) to learn how we test and evaluate various modules of the system. The documentation covers systematic experiments involving microcontrollers (such as ESP32 and STM32), IMUs, power delivery systems, and signal integrity setups. These tests assess reliability, performance, and integration feasibility under realistic conditions, serving as a reference for both design validation and iterative development.
+See this [**documentation**](https://fluxsand.github.io/4.assessment/README.html) to learn how we test and evaluate various modules of the system. This section provides an overview of testing and evaluation efforts conducted across various modules of the FluxSand system. The documentation focuses on real-time behavioral analysis of software components running on the Raspberry Pi platform. Preliminary sensor connection checks are included, while future work may involve expanded testing of hardware robustness and signal integrity.
+
 
 
 ## **📢 Future Improvements**
