@@ -34,6 +34,26 @@
 
 ---
 
+
+**📌 Key Technologies**  
+
+- **Event-driven programming**: Uses **callbacks** to process sensor inputs & LED refresh, avoiding blocking operations and ensuring responsiveness.
+- **Multithreading control**: Separates data acquisition & display updates for real-time performance.
+- **GitHub version control**: Implements **Git for version tracking**, including commit history, issue tracking, and pull requests for structured development.
+
+---
+
+## **🚀 Development Progress**
+
+🔄 **Hardware selection & procurement** ························································································✅[Completed]  
+🔄 **Initial code framework setup (C++ & sensor drivers)** ···················································✅[Completed]    
+🔄 **Optimization of real-time data processing** ·········································································✅[Completed]    
+🔄 **Enhancing user interaction (touch buttons & LED animation)** ·································✅[Completed]    
+🔄 **Software testing & debugging** ··································································································✅[Completed]    
+📢 **Project promotion (social media & Hackaday)** ·································································✅[Completed]  
+
+---
+
 ## **🎯 Key Features**
 
 ✅ **Real-time sensor data acquisition**: The MPU-9250 gyroscope & accelerometer detect device orientation to control sand flow direction and speed.  
@@ -70,7 +90,35 @@
 This project is developed primarily in **C++**, running on a **Linux + Raspberry Pi** platform, utilizing an **event-driven real-time architecture** to ensure seamless interactions.
 
 **📌 Code Structure**
-TODO: Add detailed code organization once development is complete.
+
+The source code is organized under the `src/` directory as follows:
+
+```
+src/
+├── main.cpp               # Main entry point of the program
+├── ahrs/                  # AHRS (Attitude and Heading Reference System) algorithm module
+│   ├── ahrs.cpp
+│   └── ahrs.h
+├── drivers/               # Hardware drivers
+│   ├── mpu9250.cpp        # Driver for MPU9250 gyroscope and accelerometer
+│   ├── mpu9250.h
+│   ├── led_matrix.cpp     # Control logic for MAX7219 LED matrix
+│   └── led_matrix.h
+├── gui/                   # GUI and display logic
+│   ├── display.cpp
+│   └── display.h
+└── utils/                 # Utility functions and common helpers
+    ├── timer.cpp
+    └── timer.h
+```
+
+Additional directories and files:
+
+- `third_party/libxr/`: Integrated third-party library for extended functionality.
+- `imgs/`: Visual assets and diagrams used in the README.
+- `.vscode/`: Editor configuration files for VSCode development environment.
+- `.clang-format`, `.clangd`: Code formatting and language server configuration.
+- `CMakeLists.txt`: CMake configuration file for building the project.
 
 ---
 
@@ -160,3 +208,11 @@ You can check the service status or view logs using:
 systemctl status fluxsand.service
 journalctl -u fluxsand.service -f
 ```
+
+
+## **🔗 Relevant Links**
+
+[**Documentation 📝**](https://fluxsand.github.io/)  
+[**GitHub Repository 🔗**](https://github.com/FluxSand/FluxSand)  
+[**Demo Video 🎥**](https://www.instagram.com/reel/DItV1Tgt_SF/?igsh=OG52cnpjYjh2Z2E0)  
+[**Social Media Promotion 📢**](https://www.instagram.com/fluxsand?igsh=Z2p2bWhleHZlZGo=)
